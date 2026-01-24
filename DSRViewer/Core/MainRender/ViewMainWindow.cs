@@ -25,6 +25,7 @@ namespace DSRViewer.Core.MainRender
         List<FMW> _flverExplorerWindows = new();
         public void MainRender(GraphicsDevice _gd, ImGuiController _controller)
         {
+
             ViewMainMenubar();
 
             ViewExplorerWindows(_gd, _controller);

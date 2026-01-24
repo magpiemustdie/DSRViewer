@@ -50,7 +50,8 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
                     }
                     ImGui.EndChild();
 
-                    ItemClickAction(_gd, _controller);
+                    if (_flverEditor.IsWindowOpen())
+                        _flverEditor.Render();
                 }
                 ImGui.EndTabItem();
             }
@@ -63,25 +64,15 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         }
         public virtual void ClickFunction(FileNode item)
         {
-            Console.WriteLine($"Test click: {item}");
+            Console.WriteLine($"Click: {item}");
             _selected = item;
+
+            if (_selected.IsFlver || _selected.IsNestedFlver)
+            {
+                _flverEditor.ShowWindow(true);
+                _flverEditor.SetNewItem(_selected);
+            }
         }
         public FileNode GetSelected() => _selected;
-
-        private void ItemClickAction(GraphicsDevice _gd, ImGuiController _controller)
-        {
-            if (_selected.IsNestedDDS)
-            {
-                ImGui.SameLine();
-                _ddsTexViewChild.Render(_gd, _controller, _selected);
-            }
-
-            if (_selected.IsFlver)
-            {
-                ImGui.SameLine();
-                _flverEditor.ShowWindow(true);
-                _flverEditor.Render();
-            }
-        }
     }
 }

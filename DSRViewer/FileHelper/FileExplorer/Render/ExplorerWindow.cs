@@ -40,16 +40,16 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             {
                 ImGui.Begin(_windowName, ref _showWindow, _windowFlags);
                 {
-                    ViewSetRootButton();
-                    ViewOpenSelectedButton();
-                    ViewCloseTreeWindowsButton();
+                    SetRootButton();
+                    OpenSelectedButton();
+                    CloseTreeWindowsButton();
                     ViewTreesBrowser(_gd, _controller);
                 }
                 ImGui.End();
             }
         }
 
-        private void ViewSetRootButton()
+        private void SetRootButton()
         {
             if (ImGui.Button("Select game folder"))
             {
@@ -60,7 +60,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             }
         }
 
-        private void ViewOpenSelectedButton()
+        private void OpenSelectedButton()
         {
             if (ImGui.Button("Open selected"))
             {
@@ -79,7 +79,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             }
         }
 
-        private void ViewCloseTreeWindowsButton()
+        private void CloseTreeWindowsButton()
         {
             if (ImGui.Button("Close all Tree"))
             {
