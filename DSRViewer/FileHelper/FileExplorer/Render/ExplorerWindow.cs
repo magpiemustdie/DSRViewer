@@ -66,8 +66,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             {
                 if (!string.IsNullOrEmpty(_selected.VirtualPath))
                 {
-                    var newTree = new TreeChild();
-                    newTree.SetChildName($"{_windowName} - {Path.GetFileName(_selected.VirtualPath)}");
+                    var newTree = new TreeChild($"{_windowName} - {Path.GetFileName(_selected.VirtualPath)}");
                     newTree.SetRoot(_selected.VirtualPath);
                     newTree.ShowChild(true);
                     _treeChilds.Add(newTree);

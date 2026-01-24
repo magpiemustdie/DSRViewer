@@ -247,7 +247,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         public FMW()
         {
             _windowName = "FLVER Material Editor";
-            _windowFlags = ImGuiWindowFlags.HorizontalScrollbar;
+            _windowFlags = ImGuiWindowFlags.HorizontalScrollbar | ImGuiWindowFlags.MenuBar;
 
             _fileListViewer.OnFlverSelected += OnFlverFileSelected;
             _flverMaterialList.OnMaterialSelected += OnMaterialSelected;
@@ -289,23 +289,25 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             {
                 fileDialog.Filter = "FLVER files|*.flver; *.flver.dcx|All files|*.*";
                 fileDialog.Title = "Select FLVER file";
-                fileDialog.Multiselect = false;
+                fileDialog.Multiselect = true;
 
                 var thread = new Thread(() =>
                 {
                     if (fileDialog.ShowDialog() == DialogResult.OK)
                     {
-                        var file = fileDialog.FileName;
-                        Console.WriteLine($"Opening file: {file}");
-
-                        FileTreeNodeBuilder builder = new();
-                        FileNode fileNode = builder.BuildTree(file);
-                        _fileListViewer.AddItemToList(fileNode);
-
-                        // Автоматически выбираем первый файл
-                        if (_fileListViewer.GetSelectedIndex() == -1 && _fileListViewer.GetItemCount() > 0)
+                        //var file = fileDialog.FileName;
+                        foreach (var file in fileDialog.FileNames)
                         {
-                            OnFlverFileSelected(fileNode);
+                            Console.WriteLine($"Opening file: {file}");
+                            FileTreeNodeBuilder builder = new();
+                            FileNode fileNode = builder.BuildTree(file);
+                            _fileListViewer.AddItemToList(fileNode);
+
+                            // Автоматически выбираем первый файл
+                            if (_fileListViewer.GetSelectedIndex() == -1 && _fileListViewer.GetItemCount() > 0)
+                            {
+                                OnFlverFileSelected(fileNode);
+                            }
                         }
                     }
                 });

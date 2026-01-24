@@ -46,7 +46,7 @@ namespace DSRViewer.ImGuiHelper
             }
         }
 
-        public void SetChildName(string childName)
+        public virtual void SetChildName(string childName)
         {
             this._childName = childName;
         }

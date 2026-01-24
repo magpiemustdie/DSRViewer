@@ -20,7 +20,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         {
             for (int i = 0; i < _fileNodes.Count; i++)
             {
-                if (ImGui.Selectable(_fileNodes[i].Name, this.SelectedItem == i))
+                if (ImGui.Selectable($"{_fileNodes[i].ShortVirtualPath}...{_fileNodes[i].ShortName}", this.SelectedItem == i))
                 {
                     this.SelectedItem = i;
                     this.SelectedItemName = _fileNodes[i].Name;

@@ -34,6 +34,14 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             _treeViewer.CurrentClickHandler = ClickFunction;
         }
 
+        public TreeChild(string childName)
+        {
+            _childName = childName;
+            _flverEditor.SetWindowName($"{childName} - FE");
+            _ddsTexViewChild.SetChildName($"{childName} - DDSViewer");
+            _treeViewer.CurrentClickHandler = ClickFunction;
+        }
+
         string _rootFilePath = string.Empty;
 
         public override void Render(GraphicsDevice _gd, ImGuiController _controller)
