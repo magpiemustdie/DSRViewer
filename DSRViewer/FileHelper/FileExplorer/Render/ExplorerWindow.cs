@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using DSRViewer.DDSHelper;
 using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
-using DSRViewer.FileHelper.FlverEditor.Render;
 using DSRViewer.ImGuiHelper;
 using ImGuiNET;
 using Veldrid;
@@ -16,136 +11,192 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
 {
     public partial class ViewExplorerWindow : ImGuiWindow
     {
-        public ViewExplorerWindow()
+        private readonly Config _config;
+        private FileNode _rootNode;
+        private FileNode _selectedNode;
+        private readonly FileTreeNodeFastBuilder _fileTreeBuilder = new();
+        private readonly FileTreeViewer _fileTreeViewer = new();
+        private readonly List<TreeChild> _openTreeTabs = new();
+
+        // Window sizing
+        private Vector2 _controlPanelSize = new(300, 60);
+        private Vector2 _treeBrowserSize = new();
+        private Vector2 _treeTabsSize = new();
+
+        public ViewExplorerWindow(string windowName, bool isVisible)
         {
-            _fileTreeViewer.CurrentClickHandler = ClickFunction;
+            _windowName = windowName;
+            _showWindow = isVisible;
+            _config = new Config(_windowName);
+            _fileTreeViewer.CurrentClickHandler = HandleFileNodeClick;
+            _windowFlags |= ImGuiWindowFlags.MenuBar;
+
+            LoadGameFolderFromConfig();
         }
 
-        FileBrowser _fileViewer = new();
-        string _gameFolder = string.Empty;
-
-        FileTreeNodeFastBuilder _fileTreeBuilder = new();
-        //bool _buildTree = false;
-
-        FileTreeViewer _fileTreeViewer = new();
-
-        FileNode _root = new();
-        FileNode _selected = new();
-
-        List<TreeChild> _treeChilds = [];
-
-        public override void Render(GraphicsDevice _gd, ImGuiController _controller)
+        public override void Render(GraphicsDevice graphicsDevice, ImGuiController controller)
         {
-            if (_showWindow)
+            if (!_showWindow) return;
+
+            ImGui.Begin(_windowName, ref _showWindow, _windowFlags);
             {
-                ImGui.Begin(_windowName, ref _showWindow, _windowFlags);
+                RenderMenuBar();
+                RenderControlPanel();
+                RenderFileBrowser(graphicsDevice, controller);
+            }
+            ImGui.End();
+        }
+
+        private void RenderMenuBar()
+        {
+            if (!ImGui.BeginMenuBar()) return;
+
+            if (ImGui.BeginMenu("Folders"))
+            {
+                if (ImGui.MenuItem("Set game folder"))
                 {
-                    SetRootButton();
-                    OpenSelectedButton();
-                    CloseTreeWindowsButton();
-                    ViewTreesBrowser(_gd, _controller);
+                    if (_config.SelectGameFolder())
+                    {
+                        LoadGameFolder();
+                    }
                 }
-                ImGui.End();
+
+                if (ImGui.MenuItem("Set extract folder"))
+                {
+                    _config.SelectExtractFolder();
+                }
+
+                if (ImGui.MenuItem("Set MTD folder"))
+                {
+                    _config.SelectMtdFolder();
+                }
+
+                ImGui.EndMenu();
+            }
+
+            ImGui.EndMenuBar();
+        }
+
+        private void RenderControlPanel()
+        {
+            ImGui.BeginChild($"{_windowName} - Control", _controlPanelSize, _childFlags);
+            {
+                RenderOpenSelectedButton();
+                RenderTreeTabsControls();
+            }
+            ImGui.EndChild();
+        }
+
+        private void RenderOpenSelectedButton()
+        {
+            if (ImGui.Button("Open selected") && !string.IsNullOrEmpty(_selectedNode.VirtualPath))
+            {
+                OpenFileInNewTab(_selectedNode.VirtualPath);
             }
         }
 
-        private void SetRootButton()
+        private void RenderTreeTabsControls()
         {
-            if (ImGui.Button("Select game folder"))
+            if (ImGui.Button("Close all tabs"))
             {
-                _gameFolder = _fileViewer.SetFolderPath();
-                _root = _fileTreeBuilder.BuildTree(_gameFolder);
-                _fileTreeViewer.SetChildName(_windowName + "_treeViewer");
-                _fileTreeViewer.ShowChild(true);
-            }
-        }
-
-        private void OpenSelectedButton()
-        {
-            if (ImGui.Button("Open selected"))
-            {
-                if (!string.IsNullOrEmpty(_selected.VirtualPath))
-                {
-                    var newTree = new TreeChild($"{_windowName} - {Path.GetFileName(_selected.VirtualPath)}");
-                    newTree.SetRoot(_selected.VirtualPath);
-                    newTree.ShowChild(true);
-                    _treeChilds.Add(newTree);
-                }
-                else
-                {
-                    Console.WriteLine("No file selected!");
-                }
-            }
-        }
-
-        private void CloseTreeWindowsButton()
-        {
-            if (ImGui.Button("Close all Tree"))
-            {
-                _treeChilds.Clear();
-                Console.WriteLine("All Tree closed");
+                _openTreeTabs.Clear();
             }
 
             ImGui.SameLine();
-            ImGui.Text($"Open windows: {_treeChilds.Count}");
+            ImGui.Text($"Open tabs: {_openTreeTabs.Count}");
         }
 
-        private void ViewTreesBrowser(GraphicsDevice _gd, ImGuiController _controller)
+        private void RenderFileBrowser(GraphicsDevice graphicsDevice, ImGuiController controller)
         {
-            ImGui.SetNextWindowSizeConstraints(new Vector2(0, 0), new Vector2(400, 900));
-            ImGui.BeginChild("TreeBrowser", _childSize, _childFlags);
+            ImGui.BeginChild("TreeBrowser", _treeBrowserSize, _childFlags);
             {
-                if (_gameFolder != string.Empty)
+                if (string.IsNullOrEmpty(_config.GameFolder))
                 {
-                    _fileTreeViewer.DrawBndTree(_root);
+                    ImGui.Text("No game folder set");
                 }
                 else
                 {
-                    ImGui.Text("Set folder/file");
+                    _fileTreeViewer.DrawBndTree(_rootNode);
                 }
             }
             ImGui.EndChild();
 
             ImGui.SameLine();
-
-            ViewTreesTabs(_gd, _controller);
+            RenderTreeTabs(graphicsDevice, controller);
         }
 
-        private void ViewTreesTabs(GraphicsDevice _gd, ImGuiController _controller)
+        private void RenderTreeTabs(GraphicsDevice graphicsDevice, ImGuiController controller)
         {
-            if (_treeChilds.Count > 0)
+            if (_openTreeTabs.Count == 0) return;
+
+            ImGui.BeginChild("TreeTabsContainer", _treeTabsSize, _childFlags);
             {
-                ImGui.BeginChild("trees child", _childSize, _childFlags);
+                if (ImGui.BeginTabBar("TreeTabs"))
                 {
-                    if (ImGui.BeginTabBar($"tree tab"))
-                    {
-                        foreach (var child in _treeChilds)
-                        {
-                            child.Render(_gd, _controller);
-                        }
-                        ImGui.EndTabBar();
-                    }
+                    RenderEachTab(graphicsDevice, controller);
+                    ImGui.EndTabBar();
                 }
-                ImGui.EndChild();
+            }
+            ImGui.EndChild();
 
-                // Удаляем закрытые вкладки
-                for (int i = _treeChilds.Count - 1; i >= 0; i--)
-                {
-                    if (_treeChilds[i].IsShowChild() == false)
-                    {
-                        _treeChilds.RemoveAt(i);
-                    }
-                }
+            CleanupClosedTabs();
+        }
 
-                ImGui.SameLine();
+        private void RenderEachTab(GraphicsDevice graphicsDevice, ImGuiController controller)
+        {
+            foreach (var tab in _openTreeTabs)
+            {
+                tab.Render(graphicsDevice, controller);
             }
         }
 
-        private void ClickFunction(FileNode item)
+        private void CleanupClosedTabs()
         {
-            Console.WriteLine($"Test click: {item}");
-            _selected = item;
+            for (int i = _openTreeTabs.Count - 1; i >= 0; i--)
+            {
+                if (!_openTreeTabs[i].IsShowChild())
+                {
+                    _openTreeTabs.RemoveAt(i);
+                }
+            }
         }
+
+        private void LoadGameFolderFromConfig()
+        {
+            if (!string.IsNullOrEmpty(_config.GameFolder))
+            {
+                LoadGameFolder();
+            }
+        }
+
+        private void LoadGameFolder()
+        {
+            try
+            {
+                _rootNode = _fileTreeBuilder.BuildTree(_config.GameFolder);
+                _fileTreeViewer.SetChildName($"{_windowName}_treeViewer");
+                _fileTreeViewer.ShowChild(true);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading game folder: {ex.Message}");
+                // Consider adding user-facing error notification here
+            }
+        }
+
+        private void OpenFileInNewTab(string filePath)
+        {
+            string fileName = Path.GetFileName(filePath);
+            // Передаем _config в конструктор TreeChild
+            var newTab = new TreeChild($"{_windowName} - {fileName}", filePath, true, _config);
+            _openTreeTabs.Add(newTab);
+        }
+
+        private void HandleFileNodeClick(FileNode clickedNode)
+        {
+            _selectedNode = clickedNode;
+        }
+
 
     }
 }

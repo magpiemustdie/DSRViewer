@@ -16,13 +16,15 @@ using static Org.BouncyCastle.Math.EC.ECCurve;
 using Veldrid.Sdl2;
 using DSRViewer.FileHelper.FlverEditor.Render;
 using DSRViewer.FileHelper.FileExplorer.Render;
+using DSRViewer.FileHelper.MTDEditor.Render;
 
 namespace DSRViewer.Core.MainRender
 {
     public class ViewMainWindow
     {
         List<ViewExplorerWindow> _explorerWindows = new();
-        List<FMW> _flverExplorerWindows = new();
+        List<FMW> _flverEditorWindows = new();
+        List<MTDWindow> _mtdEditorWindows = new();
         public void MainRender(GraphicsDevice _gd, ImGuiController _controller)
         {
 
@@ -30,7 +32,9 @@ namespace DSRViewer.Core.MainRender
 
             ViewExplorerWindows(_gd, _controller);
 
-            ViewFlverExplorerWindows();
+            ViewFlverEditorWindows();
+
+            ViewMTDEditorWindows();
         }
 
         private void ViewMainMenubar()
@@ -41,10 +45,8 @@ namespace DSRViewer.Core.MainRender
                 {
                     if (ImGui.MenuItem("Create..."))
                     {
-                        ViewExplorerWindow explorerWindow = new();
-                        explorerWindow.SetWindowName($"E{_explorerWindows.Count + 1}");
+                        ViewExplorerWindow explorerWindow = new($"E{_explorerWindows.Count + 1}", true);
                         explorerWindow.SetSize(new Vector2(1000, 500));
-                        explorerWindow.ShowWindow(true);
                         _explorerWindows.Add(explorerWindow);
                     }
                     ImGui.EndMenu();
@@ -54,13 +56,23 @@ namespace DSRViewer.Core.MainRender
                 {
                     if (ImGui.MenuItem("Create..."))
                     {
-                        FMW flverEditorWindow = new();
-                        flverEditorWindow.SetWindowName($"FE_{_flverExplorerWindows.Count + 1}");
-                        flverEditorWindow.ShowWindow(true);
-                        _flverExplorerWindows.Add(flverEditorWindow);
+                        FMW flverEditorWindow = new($"FE_{_flverEditorWindows.Count + 1}", true);
+                        _flverEditorWindows.Add(flverEditorWindow);
                     }
                     ImGui.EndMenu();
                 }
+
+                if (ImGui.BeginMenu("New MTD Editor..."))
+                {
+                    if (ImGui.MenuItem("Create..."))
+                    {
+                        MTDWindow _mtdEditorWindow = new($"MTDE_{_mtdEditorWindows.Count + 1}", true);
+                        _mtdEditorWindow.ShowWindow(true);
+                        _mtdEditorWindows.Add(_mtdEditorWindow);
+                    }
+                    ImGui.EndMenu();
+                }
+
             }
             ImGui.EndMainMenuBar();
         }
@@ -73,9 +85,17 @@ namespace DSRViewer.Core.MainRender
             }
         }
 
-        private void ViewFlverExplorerWindows()
+        private void ViewFlverEditorWindows()
         {
-            foreach (var window in _flverExplorerWindows)
+            foreach (var window in _flverEditorWindows)
+            {
+                window.Render();
+            }
+        }
+
+        private void ViewMTDEditorWindows()
+        {
+            foreach (var window in _mtdEditorWindows)
             {
                 window.Render();
             }

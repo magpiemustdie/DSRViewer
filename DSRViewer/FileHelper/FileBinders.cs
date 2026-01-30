@@ -46,11 +46,13 @@ namespace DSRViewer.FileHelper
         }
 
         // Быстрые методы для часто используемых операций
+        /*
         public void SetGetObjectOnly() => _get = true;
         public void SetWriteOnly() => _write = true;
         public void SetReplaceOnly(byte[] newBytes) => (_replace, _newBytes) = (true, newBytes);
         public void SetFlverReplace(FLVER2 newFlv) => (_flvReplace, _newFlv) = (true, newFlv);
-
+        */
+        public void SetGetObjectOnly() => _get = true;
         public object? GetObject() => _mainObject;
         public void Clear() => _mainObject = null;
 

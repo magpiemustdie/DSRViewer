@@ -23,9 +23,15 @@ namespace DSRViewer.ImGuiHelper
 
         protected bool _showWindow;
 
-        public ImGuiWindow()
+        public ImGuiWindow() { }
+        public ImGuiWindow(string windowName) : this()
         {
+            this._windowName = windowName;
+        }
 
+        public ImGuiWindow(string windowName, bool isVisible) : this(windowName)
+        {
+            this._showWindow = isVisible;
         }
 
         public virtual void Render()

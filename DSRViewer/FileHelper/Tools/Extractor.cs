@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using DSRFileViewer;
+using DSRViewer.FileHelper.FileExplorer.Render;
 using DSRViewer.ImGuiHelper;
 using ImGuiNET;
 
@@ -12,22 +12,37 @@ namespace DSRViewer.FileHelper.Tools
 {
     public class Extractor : ImGuiChild
     {
-        string extractFolder = "";
+        private Config _config;
+
+        // Изменяем конструктор для получения конфига
+        public Extractor(Config config)
+        {
+            _config = config;
+        }
+
         public void Render(FileNode selected)
         {
             if (ImGui.CollapsingHeader("Extractor"))
             {
-                //ImGui.SeparatorText("Extractor");
-
+                // Используем папку из конфига
                 if (ImGui.Button("Select extract folder"))
                     SetExtractFolder();
                 if (ImGui.Button("Open extract folder"))
-                    OpenExtractFolder(extractFolder);
+                    OpenExtractFolder(_config.ExtractFolder);
 
-                ImGui.Text("Dir: " + extractFolder.Split("\\").Last());
+                // Показываем текущую папку из конфига
+                if (!string.IsNullOrEmpty(_config.ExtractFolder))
+                    ImGui.Text("Dir: " + _config.ExtractFolder.Split("\\").Last());
+                else
+                    ImGui.Text("Dir: Not set");
 
                 if (ImGui.Button("Extract"))
                 {
+                    if (string.IsNullOrEmpty(_config.ExtractFolder))
+                    {
+                        Console.WriteLine("Extract folder not set!");
+                        return;
+                    }
                     Extract(selected);
                 }
             }
@@ -35,34 +50,25 @@ namespace DSRViewer.FileHelper.Tools
 
         private void Extract(FileNode selected)
         {
+            Console.WriteLine($"Start extraction...{selected.VirtualPath}");
             FileBinders binder = new();
             binder.SetGetObjectOnly();
             binder.Read(selected.VirtualPath);
-            binder.Extract(extractFolder, selected.Name);
+            binder.Extract(_config.ExtractFolder, selected.Name);
+            Console.WriteLine($"Done...{selected.VirtualPath}");
         }
 
         public void SetExtractFolder()
         {
-            var thread = new Thread(() =>
-            {
-                using (var folderDialog = new FolderBrowserDialog()) //Windows dialog
-                {
-                    folderDialog.Description = "Select a directory";
-                    folderDialog.UseDescriptionForTitle = true;
-                    if (folderDialog.ShowDialog() == DialogResult.OK)
-                    {
-                        extractFolder = folderDialog.SelectedPath;
-                    }
-                }
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
+            _config.SelectExtractFolder();
         }
 
         private void OpenExtractFolder(string selectedFolder)
         {
-            Process.Start("explorer.exe", selectedFolder);
+            if (!string.IsNullOrEmpty(selectedFolder) && Directory.Exists(selectedFolder))
+            {
+                Process.Start("explorer.exe", selectedFolder);
+            }
         }
     }
 }

@@ -24,9 +24,10 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 {
                     this.SelectedItem = i;
                     this.SelectedItemName = _fileNodes[i].Name;
-                    CurrentClickHandlerNode?.Invoke(_fileNodes[i], i);
+
 
                     // Вызываем событие при выборе FLVER-файла
+                    //CurrentClickHandlerNode?.Invoke(_fileNodes[i], i);
                     OnFlverSelected?.Invoke(_fileNodes[i]);
                 }
             }
@@ -56,7 +57,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
 
         public int GetSelectedIndex() => SelectedItem;
         public string GetSelectedName() => SelectedItemName;
-
         public int GetItemCount() => _fileNodes.Count;
     }
 }

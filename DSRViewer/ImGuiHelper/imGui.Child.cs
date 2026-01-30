@@ -20,6 +20,13 @@ namespace DSRViewer.ImGuiHelper
         protected Vector2 _minSize = new(0, 0);
         protected Vector2 _maxSize = new(500, 500);
 
+        public ImGuiChild() { }
+        public ImGuiChild(string childName, bool showChild) : this()
+        {
+            this._childName = childName;
+            this._showChild = showChild;
+        }
+
         public virtual void Render()
         {
             if (_showChild)
@@ -69,6 +76,11 @@ namespace DSRViewer.ImGuiHelper
         {
             _minSize = minSize;
             _maxSize = maxSize;
+        }
+
+        public virtual void Dispose()
+        {
+            throw new NotImplementedException();
         }
     }
 }

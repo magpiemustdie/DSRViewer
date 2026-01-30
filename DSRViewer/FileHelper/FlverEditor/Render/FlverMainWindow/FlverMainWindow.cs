@@ -18,6 +18,18 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
 {
     public class FMW : ImGuiWindow
     {
+        public FMW(string windowName, bool showWindow)
+        {
+            _windowName = windowName;
+            _showWindow = showWindow;
+
+            _windowFlags = ImGuiWindowFlags.HorizontalScrollbar | ImGuiWindowFlags.MenuBar;
+
+            _fileListViewer.OnFlverSelected += OnFlverFileSelected;
+            _flverMaterialList.OnMaterialSelected += OnMaterialSelected;
+            _flverTextureList.CurrentClickHandlerMatTexture += OnTextureSelected;
+        }
+
         FlverFileList _fileListViewer = new();
         FlverMaterialList _flverMaterialList = new();
         FlverTextureList _flverTextureList = new();
@@ -25,7 +37,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         FileNode _selectedFile = new();
         FLVER2.Material _selectedMaterial = null;
         FLVER2.Texture _selectedTexture = null;
-        bool _isOpen = false;
 
         private FLVER2 _currentFlver;
 
@@ -50,7 +61,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             "g_DetailBumpmap",
             "g_Height",
             "g_Subsurf",
-            "g_Emission",
             "g_Lightmap"
         };
 
@@ -233,7 +243,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                             ImGui.Separator();
                             ImGui.Text("Texture Info:");
                             ImGui.Text($"Scale: X={_selectedTexture.Scale.X}, Y={_selectedTexture.Scale.Y}");
-                            ImGui.Text($"Unk10: {_selectedTexture.Unk10}");
                         }
                     }
                     ImGui.EndChild();
@@ -244,19 +253,14 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             }
         }
 
-        public FMW()
-        {
-            _windowName = "FLVER Material Editor";
-            _windowFlags = ImGuiWindowFlags.HorizontalScrollbar | ImGuiWindowFlags.MenuBar;
-
-            _fileListViewer.OnFlverSelected += OnFlverFileSelected;
-            _flverMaterialList.OnMaterialSelected += OnMaterialSelected;
-            _flverTextureList.CurrentClickHandlerMatTexture += OnTextureSelected;
-        }
-
         public void SetNewItem(FileNode fileNode)
         {
             _fileListViewer.AddItemToList(fileNode);
+        }
+
+        public void SetNewItemList(List<FileNode> fileNodes)
+        {
+            _fileListViewer.UpdateList(fileNodes);
         }
 
         private void OpenNewFileButton()
@@ -302,18 +306,20 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                             FileTreeNodeBuilder builder = new();
                             FileNode fileNode = builder.BuildTree(file);
                             _fileListViewer.AddItemToList(fileNode);
-
-                            // Автоматически выбираем первый файл
+                            /* Автоматически выбираем первый файл
                             if (_fileListViewer.GetSelectedIndex() == -1 && _fileListViewer.GetItemCount() > 0)
                             {
                                 OnFlverFileSelected(fileNode);
                             }
+                            */
                         }
                     }
                 });
                 thread.SetApartmentState(ApartmentState.STA);
                 thread.Start();
                 thread.Join();
+
+
             }
         }
 
@@ -477,7 +483,9 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             try
             {
                 string filePath = _selectedFile.VirtualPath;
-                _currentFlver.Write(filePath);
+                FileBinders binders = new();
+                binders.SetCommon(false, true, false);
+                binders.SetFlver(true, true, _currentFlver);
                 Console.WriteLine($"Successfully saved changes to: {filePath}");
             }
             catch (Exception ex)
