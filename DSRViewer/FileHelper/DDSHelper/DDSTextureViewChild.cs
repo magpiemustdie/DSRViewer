@@ -33,21 +33,18 @@ namespace DSRViewer.DDSHelper
         {
             _currentFile = selected;
 
-            // Проверка валидности файла текстуры
             if (!IsValidTextureFile(_currentFile))
             {
                 ResetTextureState();
                 return;
             }
 
-            // Перезагрузка текстуры при смене файла
             if (_previousFile != _currentFile)
             {
                 LoadTexture(gd, cl, _currentFile);
                 _previousFile = _currentFile;
             }
 
-            // Отрисовка окна с текстурой
             RenderTextureWindow();
         }
 
@@ -58,13 +55,11 @@ namespace DSRViewer.DDSHelper
 
         private void LoadTexture(GraphicsDevice gd, ImGuiController cl, FileNode file)
         {
-            // Очистка предыдущих ресурсов
             DisposeTextureResources();
             _isTextureLoaded = false;
 
             try
             {
-                // Загрузка данных текстуры
                 var binders = new FileBinders();
                 binders.SetGetObjectOnly();
                 binders.Read(file.VirtualPath);
@@ -74,10 +69,8 @@ namespace DSRViewer.DDSHelper
                     var textureLoader = new DDSTools();
                     textureLoader.LoadDDSImage(textureData.Bytes, gd, out _texture, out _textureView);
 
-                    // Создание ImGui биндинга
                     _textureId = cl.GetOrCreateImGuiBinding(gd.ResourceFactory, _textureView);
 
-                    // Вычисление масштаба превью (максимум 512 пикселей по большей стороне)
                     CalculatePreviewScale();
 
                     _isTextureLoaded = true;
@@ -109,10 +102,7 @@ namespace DSRViewer.DDSHelper
         {
             ImGui.BeginChild("Cld_TextureViewWin", _childSize, _childFlags);
             {
-                // Панель с информацией о текстуре
                 RenderTextureInfoPanel();
-
-                // Панель с превью текстурой
                 RenderTexturePreviewPanel();
             }
             ImGui.EndChild();
@@ -147,12 +137,10 @@ namespace DSRViewer.DDSHelper
             {
                 if (_isTextureLoaded && _textureId != nint.Zero)
                 {
-                    // Оригинальная отрисовка текстуры
                     ImGui.Image(_textureId, _previewSize);
                 }
                 else
                 {
-                    // Отображение сообщения если текстура не загружена
                     var center = ImGui.GetContentRegionAvail() * 0.5f;
                     var textSize = ImGui.CalcTextSize("No texture loaded");
                     ImGui.SetCursorPos(center - textSize * 0.5f);
@@ -168,7 +156,6 @@ namespace DSRViewer.DDSHelper
 
             LoadTexture(gd, cl, _currentFile);
 
-            // Сброс состояний как в оригинале
             _currentFile = new FileNode();
             _previousFile = new FileNode();
         }

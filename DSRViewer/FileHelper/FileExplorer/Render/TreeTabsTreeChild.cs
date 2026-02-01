@@ -35,8 +35,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             _flverEditor = new FMW($"{childName} - FlverEditor", false);
             _ddsTexViewChild = new DDSTextureViewChild($"{childName} - DDSViewer", false);
             _extractor = new Extractor(_config);
-            // Инициализируем инжектор с колбэком для обновления узла
-            _injector = new Injector();
+            _injector = new Injector(OnInjectionComplete);
             _treeViewer.CurrentClickHandler = HandleFileNodeClick;
             SetRoot(rootFilePath);
         }
@@ -49,16 +48,21 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             {
                 if (!string.IsNullOrEmpty(RootFilePath))
                 {
-                    // Рендер экстрактора
                     _extractor.Render(_selected);
-
-                    // Рендер инжектора
-                    _injector.Render(gd, controller);
-
-                    // Остальной код
+                    _injector.Render(_root, _selected);
                     _treeTabsTools.GetTexturesDoubles(_selected);
                     _treeTabsTools.GetTexturesFormatErrors(_selected);
-
+                    if (ImGui.Button("Add texture"))
+                    {
+                        if (_selected.IsNestedTpfArchive)
+                        {
+                            FileBinders binders = new();
+                            binders.SetDds(true, false, false, 1, "New texture");
+                            binders.SetCommon(false, true);
+                            binders.Read(_selected.VirtualPath);
+                            OnInjectionComplete(_selected.VirtualPath);
+                        }
+                    }
                     _treeViewer.DrawBndTree(_root);
                 }
                 else
@@ -85,113 +89,73 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             _root = _builder.BuildTree(rootFilePath);
         }
 
-        private void UpdateTreeNode(FileNode oldNode, FileNode newNode)
+        private void OnInjectionComplete(string archivePath)
         {
-            if (oldNode == null) return;
-
             try
             {
-                // Если newNode равен null, значит нужно обновить архив и его содержимое
-                if (newNode == null)
+                Console.WriteLine($"Updating tree after injection for: {archivePath}");
+
+                if (RootFilePath.Equals(archivePath, StringComparison.OrdinalIgnoreCase))
                 {
-                    UpdateArchiveContents(oldNode);
-                    return;
+                    _root = _builder.BuildTree(RootFilePath);
                 }
-
-                // Обновляем свойства узла
-                UpdateNodeProperties(oldNode, newNode);
-
-                // Обновляем отображение
-                _treeViewer.RefreshView();
+                else
+                {
+                    UpdateArchiveNode(archivePath);
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error updating tree node: {ex.Message}");
-                // В случае ошибки обновляем весь архив
-                UpdateArchiveContents(oldNode);
+                Console.WriteLine($"Error updating tree after injection: {ex.Message}");
             }
         }
 
-        private void UpdateNodeProperties(FileNode oldNode, FileNode newNode)
+        private void UpdateArchiveNode(string archivePath)
         {
-            // Копируем свойства из нового узла в старый
-            oldNode.Size = newNode.Size;
-
-            // Обновляем другие свойства, если они есть
-            // Например, хэши, флаги и т.д.
-
-            Console.WriteLine($"Updated node: {oldNode.Name}, Size: {oldNode.Size}");
-        }
-
-        private void UpdateArchiveContents(FileNode node)
-        {
-            // Находим архив в цепочке родителей
-            FileNode archiveNode = FindArchiveNode(node);
+            var archiveNode = FindNodeByPath(_root, archivePath);
 
             if (archiveNode != null)
             {
-                // Перестраиваем поддерево архива
-                FileNode newArchiveSubtree = _builder.BuildTree(archiveNode.VirtualPath);
+                var newSubtree = _builder.BuildTree(archivePath);
 
-                if (newArchiveSubtree != null && newArchiveSubtree.Children.Count > 0)
+                if (newSubtree != null)
                 {
-                    // Обновляем детей архивного узла
-                    UpdateNodeChildren(archiveNode, newArchiveSubtree);
-
-                    // Если это был сам архив, обновляем его свойства
-                    if (archiveNode == node)
-                    {
-                        UpdateNodeProperties(archiveNode, newArchiveSubtree);
-                    }
+                    ReplaceNodeInTree(_root, archiveNode, newSubtree);
                 }
             }
         }
 
-        private FileNode FindArchiveNode(FileNode node)
+        private FileNode FindNodeByPath(FileNode currentNode, string path)
         {
-            FileNode current = node;
-            while (current != null)
+            if (currentNode.VirtualPath.Equals(path, StringComparison.OrdinalIgnoreCase))
+                return currentNode;
+
+            foreach (var child in currentNode.Children)
             {
-                if (IsArchiveFile(current.VirtualPath))
-                {
-                    return current;
-                }
-                //current = current.Parent;
+                var found = FindNodeByPath(child, path);
+                if (found != null)
+                    return found;
             }
-            return node; // Если архив не найден, возвращаем исходный узел
+
+            return null;
         }
 
-        private bool IsArchiveFile(string path)
+        private bool ReplaceNodeInTree(FileNode parent, FileNode oldNode, FileNode newNode)
         {
-            if (string.IsNullOrEmpty(path)) return false;
-
-            var archiveExtensions = new[] { ".dcx", ".bnd", ".bhd", ".tpf", ".bdt" };
-            var ext = Path.GetExtension(path).ToLower();
-
-            return archiveExtensions.Contains(ext);
-        }
-
-        private void UpdateNodeChildren(FileNode parentNode, FileNode newSubtree)
-        {
-            if (parentNode == null || newSubtree == null) return;
-
-            try
+            if (parent.Children.Contains(oldNode))
             {
-                // Обновляем детей родительского узла
-                parentNode.Children.Clear();
-
-                foreach (var child in newSubtree.Children)
-                {
-                    //child.Parent = parentNode;
-                    parentNode.Children.Add(child);
-                }
-
-                Console.WriteLine($"Updated children for: {parentNode.Name}");
+                int index = parent.Children.IndexOf(oldNode);
+                parent.Children[index] = newNode;
+                return true;
             }
-            catch (Exception ex)
+
+            foreach (var child in parent.Children)
             {
-                Console.WriteLine($"Error updating node children: {ex.Message}");
+                if (ReplaceNodeInTree(child, oldNode, newNode))
+                    return true;
             }
+
+            return false;
         }
 
         private void HandleFileNodeClick(FileNode item)

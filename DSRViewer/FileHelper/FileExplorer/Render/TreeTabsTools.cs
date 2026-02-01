@@ -92,7 +92,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         //
         public void GetTexturesFormatErrors(FileNode root)
         {
-            if (ImGui.Button("Test_TexturesFormatsErrors"))
+            if (ImGui.Button("Get tex formats errors"))
             {
                 if (root != null)
                 {

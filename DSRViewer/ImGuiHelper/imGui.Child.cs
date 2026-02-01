@@ -77,10 +77,5 @@ namespace DSRViewer.ImGuiHelper
             _minSize = minSize;
             _maxSize = maxSize;
         }
-
-        public virtual void Dispose()
-        {
-            throw new NotImplementedException();
-        }
     }
 }

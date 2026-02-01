@@ -10,11 +10,12 @@ namespace DSRViewer.FileHelper
     {
         private object? _mainObject;
         private bool _get, _write, _replace;
-        private byte[] _newBytes = Array.Empty<byte>();
+        private byte[] _newBytes = [];
         private bool _flvWrite, _flvReplace;
         private FLVER2 _newFlv = new();
-        private bool _ddsAdd, _ddsRemove;
-        private byte[] _ddsBytes = Array.Empty<byte>();
+        private bool _ddsAdd, _ddsRemove, _ddsReplace;
+        private byte[] _ddsBytes = [];
+        private DDS _newDDS = new();
         private byte _ddsFlag;
         private string _ddsName = "";
 
@@ -36,10 +37,11 @@ namespace DSRViewer.FileHelper
         }
 
         // Конфигурация DDS/TPF
-        public void SetDds(bool add = false, bool remove = false, byte[]? bytes = null, byte flag = 0, string name = "")
+        public void SetDds(bool add = false, bool remove = false, bool replace = false, byte flag = 0, string name = "", byte[]? bytes = null)
         {
             _ddsAdd = add;
             _ddsRemove = remove;
+            _ddsReplace = replace;
             if (bytes != null) _ddsBytes = bytes;
             _ddsFlag = flag;
             _ddsName = name;
@@ -142,6 +144,11 @@ namespace DSRViewer.FileHelper
             var tex = t.Textures[i[0]];
 
             if (_get && i.Length == 1) _mainObject = tex;
+            if (_ddsReplace && i.Length == 1)
+            {
+                tex.Bytes = _ddsBytes;
+                tex.Format = _ddsFlag;
+            }
             if (_ddsRemove && i.Length == 1) t.Textures.RemoveAt(i[0]);
 
             //if (i.Length > 1) ProcessTex(t, i.Skip(1).ToArray());
@@ -166,7 +173,7 @@ namespace DSRViewer.FileHelper
             if (idx + 1 < i.Length) ProcessTex(tpf, i.Skip(idx + 1).ToArray());
 
             if (_ddsAdd && idx == i.Length - 1) AddTex(tpf);
-
+            if (_replace && idx == i.Length - 1) tpf = TPF.Read(_newBytes);
             if (_write || (_replace && idx == i.Length - 1)) f.Bytes = tpf.Write();
         }
 
@@ -195,8 +202,12 @@ namespace DSRViewer.FileHelper
             }
         }
 
-        private static void AddTex(TPF t) => t.Textures.Add(new TPF.Texture
-        { Name = "New", Platform = TPF.TPFPlatform.PC, Bytes = DDSTools.fatcat });
+        private static void AddTex(TPF t)
+        {
+            t.Textures.Add(new TPF.Texture
+            { Name = "New", Platform = TPF.TPFPlatform.PC, Bytes = DDSTools.fatcat });
+            Console.WriteLine("New texture added!");
+        }
 
         private static byte[] WriteSafe(FLVER2 f, string n, byte[] b)
         {

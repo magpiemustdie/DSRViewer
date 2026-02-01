@@ -97,10 +97,5 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
         {
             _childSize = size;
         }
-
-        public void RefreshView()
-        {
-
-        }
     }
 }
