@@ -88,8 +88,6 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
 
             ImGui.SameLine();
 
-            Console.WriteLine(_gd.DeviceName);
-
             if (_ddsTexViewChild.IsShowChild())
                 _ddsTexViewChild.Render(_gd, _cl, _selected);
 
