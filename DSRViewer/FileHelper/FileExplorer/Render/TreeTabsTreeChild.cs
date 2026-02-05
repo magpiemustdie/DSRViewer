@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Numerics;
-using DSRFileViewer.FilesHelper;
-using DSRViewer.DDSHelper;
+using DSRViewer.FileHelper.FileExplorer.DDSHelper;
+using DSRViewer.FileHelper.FileExplorer.Tools;
 using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
 using DSRViewer.FileHelper.FlverEditor.Render;
-using DSRViewer.FileHelper.Tools;
-using DSRViewer.FileHelper.Tools;
+using DSRViewer.FileHelper.MTDEditor.Render;
 using DSRViewer.ImGuiHelper;
 using ImGuiNET;
 using Veldrid;
@@ -14,7 +13,11 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
 {
     public class TreeChild : ImGuiChild
     {
+        GraphicsDevice _gd;
+        ImGuiController _cl;
+
         private TreeTabsTools _treeTabsTools = new();
+        private TreeTabsTexTools _treeTabsTexTools;
         private FileTreeNodeBuilder _builder = new();
         private FileTreeViewer _treeViewer = new();
         private FileNode _root = new();
@@ -24,23 +27,29 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         private Extractor _extractor;
         private Injector _injector;
         private Config _config;
+        private List<MTDShortDetails> _mtdList;
 
         public string RootFilePath { get; private set; } = string.Empty;
 
-        public TreeChild(string childName, string rootFilePath, bool showChild, Config config) : base(childName, showChild)
+        public TreeChild(string childName, string rootFilePath, bool showChild, Config config, List<MTDShortDetails> mtdList, GraphicsDevice gd, ImGuiController cl)
         {
+            _gd = gd;
+            _cl = cl;
+
             _config = config;
+            _mtdList = mtdList;
             _childName = childName;
             _showChild = showChild;
-            _flverEditor = new FMW($"{childName} - FlverEditor", false);
+            _flverEditor = new FMW($"{childName} - FlverEditor", false, _config, _mtdList);
             _ddsTexViewChild = new DDSTextureViewChild($"{childName} - DDSViewer", false);
             _extractor = new Extractor(_config);
             _injector = new Injector(OnInjectionComplete);
+            _treeTabsTexTools = new TreeTabsTexTools(OnInjectionComplete);
             _treeViewer.CurrentClickHandler = HandleFileNodeClick;
             SetRoot(rootFilePath);
         }
 
-        public override void Render(GraphicsDevice gd, ImGuiController controller)
+        public override void Render()
         {
             if (!ImGui.BeginTabItem(_childName, ref _showChild)) return;
 
@@ -50,18 +59,23 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
                 {
                     _extractor.Render(_selected);
                     _injector.Render(_root, _selected);
-                    _treeTabsTools.GetTexturesDoubles(_selected);
-                    _treeTabsTools.GetTexturesFormatErrors(_selected);
-                    if (ImGui.Button("Add texture"))
+                    if (ImGui.CollapsingHeader("Tools"))
                     {
-                        if (_selected.IsNestedTpfArchive)
+                        if (ImGui.Button("Get flver list"))
                         {
-                            FileBinders binders = new();
-                            binders.SetDds(true, false, false, 1, "New texture");
-                            binders.SetCommon(false, true);
-                            binders.Read(_selected.VirtualPath);
-                            OnInjectionComplete(_selected.VirtualPath);
+                            List<FileNode> newList = _treeTabsTools.NodeFlverFinder(_selected);
+                            _flverEditor.SetNewItemList(newList);
+                            _flverEditor.ShowWindow(true);
                         }
+                        ImGui.Separator();
+                        _treeTabsTools.GetTexturesDoubles(_selected);
+                        _treeTabsTools.GetTexturesFormatErrors(_selected);
+                        ImGui.Separator();
+                        _treeTabsTexTools.ButtonAddTexture(_selected);
+                        _treeTabsTexTools.ButtonRemoveTexture(_selected);
+                        _treeTabsTexTools.ButtonRenameTexture(_selected);
+                        _treeTabsTexTools.ButtonReFlagTexture(_selected);
+                        ImGui.Spacing();
                     }
                     _treeViewer.DrawBndTree(_root);
                 }
@@ -74,10 +88,12 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
 
             ImGui.SameLine();
 
-            if (_ddsTexViewChild.IsShowChild())
-                _ddsTexViewChild.Render(gd, controller, _selected);
+            Console.WriteLine(_gd.DeviceName);
 
-            if (_flverEditor.IsWindowOpen())
+            if (_ddsTexViewChild.IsShowChild())
+                _ddsTexViewChild.Render(_gd, _cl, _selected);
+
+            if (_flverEditor.IsShowWindow())
                 _flverEditor.Render();
 
             ImGui.EndTabItem();
@@ -116,11 +132,11 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
 
             if (archiveNode != null)
             {
-                var newSubtree = _builder.BuildTree(archivePath);
+                var newNode = _builder.BuildTree(archivePath.Split("|")[0]);
 
-                if (newSubtree != null)
+                if (newNode != null)
                 {
-                    ReplaceNodeInTree(_root, archiveNode, newSubtree);
+                    _root = newNode;
                 }
             }
         }
@@ -138,24 +154,6 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             }
 
             return null;
-        }
-
-        private bool ReplaceNodeInTree(FileNode parent, FileNode oldNode, FileNode newNode)
-        {
-            if (parent.Children.Contains(oldNode))
-            {
-                int index = parent.Children.IndexOf(oldNode);
-                parent.Children[index] = newNode;
-                return true;
-            }
-
-            foreach (var child in parent.Children)
-            {
-                if (ReplaceNodeInTree(child, oldNode, newNode))
-                    return true;
-            }
-
-            return false;
         }
 
         private void HandleFileNodeClick(FileNode item)

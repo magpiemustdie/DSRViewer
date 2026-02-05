@@ -9,7 +9,7 @@ using SoulsFormats;
 
 namespace DSRViewer.FileHelper.FlverEditor.Render
 {
-    public class FlverMaterialList : ClickableList
+    public class FlverMaterialList : ImGuiClickableList
     {
         List<FLVER2.Material> _flverMaterials = [];
 
@@ -33,7 +33,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                     this.SelectedItem = i;
                     this.SelectedItemName = displayName;
 
-                    CurrentClickHandlerMaterial?.Invoke(material, i);
+                    ClickHandlerMaterial?.Invoke(material, i);
                     OnMaterialSelected?.Invoke(material);
                 }
             }
@@ -41,7 +41,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
 
         public void UpdateList(List<FLVER2.Material> newList)
         {
-            _flverMaterials = newList ?? new List<FLVER2.Material>();
+            _flverMaterials = newList ?? [];
         }
 
         public void ClearList()

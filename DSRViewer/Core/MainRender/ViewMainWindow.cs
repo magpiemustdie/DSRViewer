@@ -22,15 +22,24 @@ namespace DSRViewer.Core.MainRender
 {
     public class ViewMainWindow
     {
-        List<ViewExplorerWindow> _explorerWindows = new();
+        List<ExplorerWindow> _explorerWindows = new();
         List<FMW> _flverEditorWindows = new();
         List<MTDWindow> _mtdEditorWindows = new();
-        public void MainRender(GraphicsDevice _gd, ImGuiController _controller)
+
+        GraphicsDevice _gd;
+        ImGuiController _controller;
+
+        public ViewMainWindow(GraphicsDevice gd, ImGuiController controller)
+        {
+            _gd = gd;
+            _controller = controller;
+        }
+        public void MainRender()
         {
 
             ViewMainMenubar();
 
-            ViewExplorerWindows(_gd, _controller);
+            ViewExplorerWindows();
 
             ViewFlverEditorWindows();
 
@@ -45,7 +54,7 @@ namespace DSRViewer.Core.MainRender
                 {
                     if (ImGui.MenuItem("Create..."))
                     {
-                        ViewExplorerWindow explorerWindow = new($"E{_explorerWindows.Count + 1}", true);
+                        ExplorerWindow explorerWindow = new($"E{_explorerWindows.Count + 1}", true, _gd, _controller);
                         explorerWindow.SetSize(new Vector2(1000, 500));
                         _explorerWindows.Add(explorerWindow);
                     }
@@ -77,11 +86,11 @@ namespace DSRViewer.Core.MainRender
             ImGui.EndMainMenuBar();
         }
 
-        private void ViewExplorerWindows(GraphicsDevice _gd, ImGuiController _controller)
+        private void ViewExplorerWindows()
         {
             foreach (var window in _explorerWindows)
             {
-                window.Render(_gd, _controller);
+                window.Render();
             }
         }
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using DSRViewer.FileHelper.DDSHelper;
+using DSRViewer.FileHelper.FileExplorer.DDSHelper;
 using SoulsFormats;
 
 namespace DSRViewer.FileHelper
@@ -13,7 +13,7 @@ namespace DSRViewer.FileHelper
         private byte[] _newBytes = [];
         private bool _flvWrite, _flvReplace;
         private FLVER2 _newFlv = new();
-        private bool _ddsAdd, _ddsRemove, _ddsReplace;
+        private bool _ddsAdd, _ddsRemove, _ddsReplace, _ddsRename, _ddsReplaceFlag;
         private byte[] _ddsBytes = [];
         private DDS _newDDS = new();
         private byte _ddsFlag;
@@ -37,11 +37,13 @@ namespace DSRViewer.FileHelper
         }
 
         // Конфигурация DDS/TPF
-        public void SetDds(bool add = false, bool remove = false, bool replace = false, byte flag = 0, string name = "", byte[]? bytes = null)
+        public void SetDds(bool add = false, bool remove = false, bool replace = false, bool rename = false, bool reflag = false, byte flag = 0, string name = "", byte[]? bytes = null)
         {
             _ddsAdd = add;
             _ddsRemove = remove;
             _ddsReplace = replace;
+            _ddsRename = rename;
+            _ddsReplaceFlag = reflag;
             if (bytes != null) _ddsBytes = bytes;
             _ddsFlag = flag;
             _ddsName = name;
@@ -149,6 +151,8 @@ namespace DSRViewer.FileHelper
                 tex.Bytes = _ddsBytes;
                 tex.Format = _ddsFlag;
             }
+            if (_ddsRename && i.Length == 1) tex.Name = _ddsName;
+            if (_ddsReplaceFlag && i.Length == 1) tex.Format = _ddsFlag;
             if (_ddsRemove && i.Length == 1) t.Textures.RemoveAt(i[0]);
 
             //if (i.Length > 1) ProcessTex(t, i.Skip(1).ToArray());

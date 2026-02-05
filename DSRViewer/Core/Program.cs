@@ -22,7 +22,6 @@ namespace DSRViewer
         static int _windowHeight = 1000;
         static void Main(string[] args)
         {
-            ViewMainWindow mainWindow = new();
             // Create window, GraphicsDevice, and all resources necessary for the demo.
             VeldridStartup.CreateWindowAndGraphicsDevice(
                 new WindowCreateInfo(50, 50, _windowWidth, _windowHeight, WindowState.Normal, "DSRViewer"),
@@ -40,6 +39,7 @@ namespace DSRViewer
             var stopwatch = Stopwatch.StartNew();
             float deltaTime = 0f;
             // Main application loop
+            ViewMainWindow mainWindow = new(_gd, _controller);
 
             while (_window.Exists)
             {
@@ -51,7 +51,8 @@ namespace DSRViewer
                 _controller.Update(deltaTime, snapshot);
 
                 // Draw ImGui UI
-                mainWindow.MainRender(_gd, _controller);
+
+                mainWindow.MainRender();
 
                 _cl.Begin();
                 _cl.SetFramebuffer(_gd.MainSwapchain.Framebuffer);

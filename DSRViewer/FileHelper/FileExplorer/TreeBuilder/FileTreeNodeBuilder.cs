@@ -6,7 +6,7 @@ using SharpGen.Runtime;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Veldrid.MetalBindings;
-using DSRViewer.FileHelper.DDSHelper;
+using DSRViewer.FileHelper.FileExplorer.DDSHelper;
 
 namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
 {

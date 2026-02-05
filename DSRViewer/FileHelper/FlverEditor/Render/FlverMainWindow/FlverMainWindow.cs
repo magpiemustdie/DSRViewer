@@ -13,6 +13,10 @@ using ImGuiNET;
 using SoulsFormats;
 using Veldrid;
 using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
+using DSRViewer.FileHelper.FlverEditor.Tools;
+using DSRViewer.FileHelper.MTDEditor.Render;
+using DSRViewer.FileHelper.flverTools.Tools;
+using DSRViewer.FileHelper.FlverEditor.Tools.FlverTexFinder;
 
 namespace DSRViewer.FileHelper.FlverEditor.Render
 {
@@ -27,8 +31,26 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
 
             _fileListViewer.OnFlverSelected += OnFlverFileSelected;
             _flverMaterialList.OnMaterialSelected += OnMaterialSelected;
-            _flverTextureList.CurrentClickHandlerMatTexture += OnTextureSelected;
+            _flverTextureList.ClickHandlerMatTexture += OnTextureSelected;
+
+            _flverMTDFinder = new FlverMTDFinder(_windowName + " - MTDFinder", false);
+            _flverNameCorrector = new FlverNameCorrector(_windowName + " - Name corrector", false);
+            _flverMTDReplacer = new FlverMTDReplacer(_windowName + " - MTDReplacer", false, _mtdList);
+            _flverTexFinder = new FlverTexFinder(_windowName + " - Flver texture finder", false, _mtdList);
         }
+
+        public FMW(string windowName, bool showWindow, Config config, List<MTDShortDetails> mtdList) : this(windowName, showWindow)
+        {
+            _config = config;
+            //_mtdWindow = new MTDWindow(_windowName + " - MTDEditor", false);
+            //_mtdWindow.SetMTDPath(_config);
+            _mtdList = mtdList;
+        }
+
+        FlverMTDFinder _flverMTDFinder;
+        FlverNameCorrector _flverNameCorrector;
+        FlverMTDReplacer _flverMTDReplacer;
+        FlverTexFinder _flverTexFinder;
 
         FlverFileList _fileListViewer = new();
         FlverMaterialList _flverMaterialList = new();
@@ -37,6 +59,9 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         FileNode _selectedFile = new();
         FLVER2.Material _selectedMaterial = null;
         FLVER2.Texture _selectedTexture = null;
+        Config _config = new();
+        //MTDWindow _mtdWindow;
+        List<MTDShortDetails> _mtdList = [];
 
         private FLVER2 _currentFlver;
 
@@ -44,9 +69,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         private string _editingMTD = "";
         private string _editingTexturePath = "";
         private string _editingTextureType = "";
+        private string _addingTextureType = "";
         private bool _isEditingMTD = false;
         private bool _isEditingTexturePath = false;
         private bool _isEditingTextureType = false;
+        private bool _isAddingTextureType = false;
 
         // Предопределенные типы текстур для выпадающего списка
         private readonly List<string> _commonTextureTypes = new()
@@ -64,13 +91,16 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             "g_Lightmap"
         };
 
-        public bool IsWindowOpen() => _showWindow;
         public override void Render()
         {
             if (_showWindow)
             {
                 ImGui.Begin(_windowName, ref _showWindow, _windowFlags);
                 {
+                    //Меню
+                    MenuBarConfig();
+                    MenuBarToolsRender();
+
                     // Верхняя панель с кнопками
                     OpenNewFileButton();
                     ImGui.SameLine();
@@ -239,6 +269,57 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                                 ImGui.EndGroup();
                             }
 
+                            if (!_isAddingTextureType)
+                            {
+                                ImGui.Text($"Type: Add");
+                                if (ImGui.Button("Add Type"))
+                                {
+                                    _addingTextureType = "New";
+                                    _isAddingTextureType = true;
+                                }
+                            }
+                            else
+                            {
+                                ImGui.Text("New Type:");
+
+                                // Показываем выпадающий список с предопределенными типами
+                                if (ImGui.BeginCombo("##TextureAddType", _addingTextureType))
+                                {
+                                    foreach (var type in _commonTextureTypes)
+                                    {
+                                        bool isSelected = (_addingTextureType == type);
+                                        if (ImGui.Selectable(type, isSelected))
+                                        {
+                                            _addingTextureType = type;
+                                        }
+                                        if (isSelected)
+                                        {
+                                            ImGui.SetItemDefaultFocus();
+                                        }
+                                    }
+
+                                    // Позволяем ввод кастомного типа
+                                    ImGui.Separator();
+                                    ImGui.Text("Add Custom Type:");
+                                    ImGui.InputText("##AddCustomType", ref _addingTextureType, 256);
+
+                                    ImGui.EndCombo();
+                                }
+
+                                ImGui.BeginGroup();
+                                if (ImGui.Button("Apply##AddType"))
+                                {
+                                    ApplyTextureTypeAdd();
+                                }
+                                ImGui.SameLine();
+                                if (ImGui.Button("Cancel##AddType"))
+                                {
+                                    _isAddingTextureType = false;
+                                    _addingTextureType = "New";
+                                }
+                                ImGui.EndGroup();
+                            }
+
                             // Информация о текстуре
                             ImGui.Separator();
                             ImGui.Text("Texture Info:");
@@ -251,6 +332,43 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 }
                 ImGui.End();
             }
+        }
+
+        private void MenuBarConfig()
+        {
+            if (ImGui.BeginMenuBar())
+            {
+                if (ImGui.BeginMenu("Tools"))
+                {
+                    if (ImGui.MenuItem("MTD finder"))
+                    {
+                        _flverMTDFinder.ShowWindow(true);
+                    }
+                    if (ImGui.MenuItem("Name corrector"))
+                    {
+                        _flverNameCorrector.ShowWindow(true);
+                    }
+                    if (ImGui.MenuItem("MTD Replacer"))
+                    {
+                        _flverMTDReplacer.ShowWindow(true);
+                    }
+                    if (ImGui.MenuItem("Tex finder"))
+                    {
+                        _flverTexFinder.ShowWindow(true);
+                    }
+
+                    ImGui.EndMenu();
+                }
+                ImGui.EndMenuBar();
+            }
+        }
+
+        private void MenuBarToolsRender()
+        {
+            _flverMTDFinder.Render(_fileListViewer.GetFileList());
+            _flverNameCorrector.Render(_fileListViewer.GetFileList());
+            _flverMTDReplacer.Render(_fileListViewer.GetFileList());
+            _flverTexFinder.Render(_fileListViewer.GetFileList(), _mtdList);
         }
 
         public void SetNewItem(FileNode fileNode)
@@ -318,8 +436,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 thread.SetApartmentState(ApartmentState.STA);
                 thread.Start();
                 thread.Join();
-
-
             }
         }
 
@@ -390,6 +506,17 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 _flverTextureList.UpdateTexture(textureIndex, null, _editingTextureType);
                 _selectedTexture.Type = _editingTextureType;
                 _isEditingTextureType = false;
+
+                Console.WriteLine($"Updated texture type to: {_editingTextureType}");
+            }
+        }
+        private void ApplyTextureTypeAdd()
+        {
+            if (!string.IsNullOrEmpty(_addingTextureType))
+            {
+
+                _flverTextureList.AddTexture(_addingTextureType);
+                _isAddingTextureType = false;
 
                 Console.WriteLine($"Updated texture type to: {_editingTextureType}");
             }

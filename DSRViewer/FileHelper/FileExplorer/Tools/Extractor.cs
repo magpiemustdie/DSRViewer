@@ -8,7 +8,7 @@ using DSRViewer.FileHelper.FileExplorer.Render;
 using DSRViewer.ImGuiHelper;
 using ImGuiNET;
 
-namespace DSRViewer.FileHelper.Tools
+namespace DSRViewer.FileHelper.FileExplorer.Tools
 {
     public class Extractor : ImGuiChild
     {

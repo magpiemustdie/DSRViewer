@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using DSRViewer.FileHelper.DDSHelper;
+using DSRViewer.FileHelper.FileExplorer.DDSHelper;
 using ImGuiNET;
 
-namespace DSRViewer.FileHelper.FileExplorer.Render
+namespace DSRViewer.FileHelper.FileExplorer.Tools
 {
     public class TreeTabsTools
     {

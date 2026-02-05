@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DSRViewer.FileHelper.DDSHelper
+namespace DSRViewer.FileHelper.FileExplorer.DDSHelper
 {
     public class DDS_FlagFormatList
     {

@@ -9,6 +9,7 @@ using SoulsFormats;
 using DSRViewer.ImGuiHelper;
 using System.Windows.Forms;
 using System.IO;
+using DSRViewer.FileHelper.FileExplorer.Render;
 
 namespace DSRViewer.FileHelper.MTDEditor.Render
 {
@@ -19,6 +20,15 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
             _windowName = windowName;
             _showWindow = showWindow;
         }
+
+        public MTDWindow(string windowName, bool showWindow, Config config)
+        {
+            _windowName = windowName;
+            _showWindow = showWindow;
+            _config = config;
+        }
+
+        Config _config = new();
 
         List<MTDShortDetails> mtdList = [];
         string _mtdDir = "";
@@ -43,7 +53,7 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
 
         private bool hasUnsavedChanges = false;
 
-        public string SetMTDDir()
+        private string SetMTDDir()
         {
             var file = "";
             var thread = new Thread(() =>
@@ -65,11 +75,23 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
             return file;
         }
 
+        public void SetMTDPath(string mtdPath)
+        {
+            _mtdDir = mtdPath;
+            UpdateLists();
+        }
+
+        public void SetMTDPath(Config config)
+        {
+            _mtdDir = config.MtdFolder;
+            UpdateLists();
+        }
+
         public override void Render()
         {
             if (_showWindow)
             {
-                ImGui.Begin("MTD Editor - Dark Souls Remastered", ref _showWindow, ImGuiWindowFlags.MenuBar);
+                ImGui.Begin(_windowName, ref _showWindow, ImGuiWindowFlags.MenuBar);
                 {
                     if (ImGui.BeginMenuBar())
                     {
@@ -268,15 +290,6 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
                             {
                                 LoadMTDForEditing(selectedMTDList);
                             }
-
-                            ImGui.SameLine();
-
-                            /*
-                            if (ImGui.Button("Copy Values", new Vector2(150, 30)))
-                            {
-                                CopyMTDValuesToClipboard();
-                            }
-                            */
                         }
                         else
                         {

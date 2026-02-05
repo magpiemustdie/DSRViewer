@@ -9,7 +9,7 @@ using SoulsFormats;
 
 namespace DSRViewer.ImGuiHelper
 {
-    public class ClickableList : ImGuiChild
+    public class ImGuiClickableList : ImGuiChild
     {
         protected int SelectedItem { get; set; } = -1;
         protected string SelectedItemName { get; set; } = string.Empty;
@@ -19,17 +19,18 @@ namespace DSRViewer.ImGuiHelper
         public delegate void ClickActionMaterial(FLVER2.Material item, int index);
         public delegate void ClickActionMatTexture(FLVER2.Texture item, int index);
 
-        public ClickActionNode CurrentClickHandlerNode;
-        public ClickActionString CurrentClickHandlerString;
-        public ClickActionMaterial CurrentClickHandlerMaterial;
-        public ClickActionMatTexture CurrentClickHandlerMatTexture;
+        public ClickActionNode ClickHandlerNode;
+        public ClickActionString ClickHandlerString;
+        public ClickActionMaterial ClickHandlerMaterial;
+        public ClickActionMatTexture ClickHandlerMatTexture;
 
-        public ClickableList()
+
+        public ImGuiClickableList()
         {
-            CurrentClickHandlerNode = DefaultClickFunctionNode;
-            CurrentClickHandlerString = DefaultClickFunctionString;
-            CurrentClickHandlerMaterial = DefaultClickFunctionMaterial;
-            CurrentClickHandlerMatTexture = DefaultClickFunctionMatTexture;
+            ClickHandlerNode = DefaultClickFunctionNode;
+            ClickHandlerString = DefaultClickFunctionString;
+            ClickHandlerMaterial = DefaultClickFunctionMaterial;
+            ClickHandlerMatTexture = DefaultClickFunctionMatTexture;
         }
 
         protected virtual void DefaultClickFunctionNode(FileNode node, int index)
@@ -58,32 +59,6 @@ namespace DSRViewer.ImGuiHelper
                 ImGui.Text("Put list here");
             }
             ImGui.EndChild();
-        }
-
-        public void Render(List<FileNode> items)
-        {
-            for (int i = 0; i < items.Count; i++)
-            {
-                if (ImGui.Selectable(items[i].Name, this.SelectedItem == i))
-                {
-                    this.SelectedItem = i;
-                    this.SelectedItemName = items[i].Name;
-                    CurrentClickHandlerNode?.Invoke(items[i], i);
-                }
-            }
-        }
-
-        public void Render(List<string> items)
-        {
-            for (int i = 0; i < items.Count; i++)
-            {
-                if (ImGui.Selectable(items[i], this.SelectedItem == i))
-                {
-                    this.SelectedItem = i;
-                    this.SelectedItemName = items[i];
-                    CurrentClickHandlerString?.Invoke(items[i], i);
-                }
-            }
         }
     }
 }

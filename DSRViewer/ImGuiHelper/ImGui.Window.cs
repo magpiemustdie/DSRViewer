@@ -55,7 +55,7 @@ namespace DSRViewer.ImGuiHelper
                 ImGui.SetNextWindowSizeConstraints(new Vector2(0, 0), new Vector2(400, 400));
                 ImGui.Begin(_windowName, ref this._showWindow, _windowFlags);
                 {
-                    ImGui.Text($"Window render");
+                    ImGui.Text($"Window render with GD, CL");
                 }
                 ImGui.End();
             }

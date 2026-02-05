@@ -2,12 +2,12 @@
 using ImGuiNET;
 using Veldrid;
 using SoulsFormats;
-using DSRViewer.FileHelper.DDSHelper;
+using DSRViewer.FileHelper.FileExplorer.DDSHelper;
 using DSRViewer.ImGuiHelper;
 using DSRViewer.FileHelper;
 using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
 
-namespace DSRViewer.DDSHelper
+namespace DSRViewer.FileHelper.FileExplorer.DDSHelper
 {
     public class DDSTextureViewChild : ImGuiChild
     {

@@ -9,7 +9,7 @@ using Veldrid;
 
 namespace DSRViewer.ImGuiHelper
 {
-    public class ImGuiChild
+    public abstract class ImGuiChild
     {
         protected ImGuiChildFlags _childFlags = ImGuiChildFlags.Borders | ImGuiChildFlags.AutoResizeY | ImGuiChildFlags.AutoResizeX | ImGuiChildFlags.AlwaysAutoResize;
 

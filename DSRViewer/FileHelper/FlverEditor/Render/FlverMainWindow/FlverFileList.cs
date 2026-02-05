@@ -9,7 +9,7 @@ using SoulsFormats;
 
 namespace DSRViewer.FileHelper.FlverEditor.Render
 {
-    public class FlverFileList : ClickableList
+    public class FlverFileList : ImGuiClickableList
     {
         List<FileNode> _fileNodes = [];
 
@@ -25,9 +25,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                     this.SelectedItem = i;
                     this.SelectedItemName = _fileNodes[i].Name;
 
-
-                    // Вызываем событие при выборе FLVER-файла
-                    //CurrentClickHandlerNode?.Invoke(_fileNodes[i], i);
                     OnFlverSelected?.Invoke(_fileNodes[i]);
                 }
             }
@@ -55,6 +52,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             _fileNodes.Clear();
         }
 
+        public List<FileNode> GetFileList() => _fileNodes;
         public int GetSelectedIndex() => SelectedItem;
         public string GetSelectedName() => SelectedItemName;
         public int GetItemCount() => _fileNodes.Count;

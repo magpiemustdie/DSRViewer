@@ -5,13 +5,13 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using DSRViewer.FileHelper;
-using DSRViewer.FileHelper.DDSHelper;
+using DSRViewer.FileHelper.FileExplorer.DDSHelper;
 using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
 using DSRViewer.ImGuiHelper;
 using ImGuiNET;
 using SoulsFormats;
 
-namespace DSRFileViewer.FilesHelper
+namespace DSRViewer.FileHelper.FileExplorer.Tools
 {
     public class Injector : ImGuiChild
     {
@@ -45,7 +45,6 @@ namespace DSRFileViewer.FilesHelper
 
                         if (_success)
                         {
-                            // Вызываем колбэк для обновления дерева
                             _onInjectionComplete?.Invoke(selected.VirtualPath.Split('|')[0]);
 
                             ImGui.OpenPopup("InjectionSuccess");
@@ -111,12 +110,11 @@ namespace DSRFileViewer.FilesHelper
 
                     FileBinders binder = new();
                     binder.SetCommon(false, true, false);
-                    binder.SetDds(false, false, true, imageFlag, selected.Name, newBytes);
+                    binder.SetDds(false, false, true, true, true, imageFlag, selected.Name, newBytes);
                     binder.Read(selected.VirtualPath);
                     success = true;
                 }
-                // Раскомментируйте остальные условия по мере необходимости
-                
+
                 else if (selected.IsFlver || selected.IsNestedFlver)
                 {
                     FileBinders binder = new();
@@ -132,7 +130,7 @@ namespace DSRFileViewer.FilesHelper
                     binder.Read(selected.VirtualPath);
                     success = true;
                 }
-                
+
             }
             catch (Exception ex)
             {

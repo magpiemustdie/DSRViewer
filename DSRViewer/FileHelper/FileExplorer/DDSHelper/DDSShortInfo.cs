@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DSRViewer.FileHelper.DDSHelper
+namespace DSRViewer.FileHelper.FileExplorer.DDSHelper
 {
     internal class DDSShortInfo
     {

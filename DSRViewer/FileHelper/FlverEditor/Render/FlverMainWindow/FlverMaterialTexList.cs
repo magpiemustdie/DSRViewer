@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using DSRViewer.ImGuiHelper;
@@ -9,7 +10,7 @@ using SoulsFormats;
 
 namespace DSRViewer.FileHelper.FlverEditor.Render
 {
-    public class FlverTextureList : ClickableList
+    public class FlverTextureList : ImGuiClickableList
     {
         List<FLVER2.Texture> _textures = [];
 
@@ -36,7 +37,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 {
                     this.SelectedItem = i;
                     this.SelectedItemName = textureInfo;
-                    CurrentClickHandlerMatTexture?.Invoke(texture, i);
+                    ClickHandlerMatTexture?.Invoke(texture, i);
                 }
 
                 if (ImGui.IsItemHovered())
@@ -78,6 +79,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 if (!string.IsNullOrEmpty(newType))
                     _textures[index].Type = newType;
             }
+        }
+
+        public void AddTexture(string newType)
+        {
+            _textures.Add(new FLVER2.Texture(newType, "", new Vector2(1, 1), 1, true, 0, 0, 0));
         }
 
         public int GetSelectedIndex() => SelectedItem;
