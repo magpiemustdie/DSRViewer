@@ -97,8 +97,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             }
 
             byte[] newBytes = File.ReadAllBytes(_filePath);
-            bool success = false;
-
+            bool success;
             try
             {
                 if (selected.IsNestedDDS)

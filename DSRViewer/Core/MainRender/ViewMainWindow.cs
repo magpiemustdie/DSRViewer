@@ -36,13 +36,9 @@ namespace DSRViewer.Core.MainRender
         }
         public void MainRender()
         {
-
             ViewMainMenubar();
-
             ViewExplorerWindows();
-
             ViewFlverEditorWindows();
-
             ViewMTDEditorWindows();
         }
 
@@ -55,7 +51,6 @@ namespace DSRViewer.Core.MainRender
                     if (ImGui.MenuItem("Create..."))
                     {
                         ExplorerWindow explorerWindow = new($"E{_explorerWindows.Count + 1}", true, _gd, _controller);
-                        explorerWindow.SetSize(new Vector2(1000, 500));
                         _explorerWindows.Add(explorerWindow);
                     }
                     ImGui.EndMenu();

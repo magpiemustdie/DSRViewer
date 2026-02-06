@@ -17,14 +17,14 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         private FileNode _selectedNode;
         private readonly FileTreeNodeFastBuilder _fileTreeBuilder = new();
         private readonly FileTreeViewer _fileTreeViewer = new();
-        private readonly List<TreeChild> _openTreeTabs = new();
+        private readonly List<TreeChild> _openTreeTabs = [];
         private readonly MTDWindow _mtdWindow;
 
-        // Window sizing
-        private Vector2 _controlPanelSize = new(300, 60);
-        private Vector2 _treeBrowserSize = new();
-        private Vector2 _treeTabsSize = new();
-
+        private Vector2 _controlPanelSize = new(-1, 60);
+        private Vector2 _treeBrowserSize = new(0, -1);
+        private Vector2 _treeBrowserMinSize = new(300, 300);
+        private Vector2 _treeBrowserMaxSize = new(-1, -1);
+        private Vector2 _treeTabsSize = new(-1, -1);
 
         GraphicsDevice _gd;
         ImGuiController _cl;
@@ -33,9 +33,11 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         {
             _windowName = windowName;
             _showWindow = isVisible;
-            _config = new Config(_windowName + "Config");
-            _mtdWindow = new(_windowName + "MTDEditor", false);
-            _mtdWindow.SetMTDPath(_config);
+            _windowFlags = ImGuiWindowFlags.None;
+            _minSize = new(300, 300);
+            _maxSize = new Vector2(1500, 950);
+            _config = new Config(_windowName + " - Config");
+            _mtdWindow = new(_windowName + " - MTDEditor", false, _config);
             _fileTreeViewer.CurrentClickHandler = HandleFileNodeClick;
             _windowFlags |= ImGuiWindowFlags.MenuBar;
 
@@ -49,12 +51,15 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         {
             if (!_showWindow) return;
 
+            ImGui.SetNextWindowSizeConstraints(_minSize, _maxSize);
+
             ImGui.Begin(_windowName, ref _showWindow, _windowFlags);
             {
                 RenderMenuBar();
                 RenderControlPanel();
-                RenderMTDWindow();
                 RenderFileBrowser();
+
+                RenderMTDWindow();
             }
             ImGui.End();
         }
@@ -135,6 +140,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
 
         private void RenderFileBrowser()
         {
+            ImGui.SetNextWindowSizeConstraints(_treeBrowserMinSize, _treeBrowserMaxSize);
             ImGui.BeginChild("TreeBrowser", _treeBrowserSize, _childFlags);
             {
                 if (string.IsNullOrEmpty(_config.GameFolder))

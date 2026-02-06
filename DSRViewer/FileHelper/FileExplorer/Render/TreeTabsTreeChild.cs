@@ -49,52 +49,57 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             SetRoot(rootFilePath);
         }
 
+        private Vector2 _treeBrowserSize = new(0, -1);
+        private Vector2 _treeBrowserMinSize = new(300, 300);
+        private Vector2 _treeBrowserMaxSize = new(-1, -1);
+        private Vector2 _toolsChildSize = new(-1, 0); 
+
         public override void Render()
         {
-            if (!ImGui.BeginTabItem(_childName, ref _showChild)) return;
+            if (string.IsNullOrEmpty(RootFilePath)) return;
 
-            ImGui.BeginChild(_childName, _childSize, _childFlags);
+            if (ImGui.BeginTabItem(_childName, ref _showChild))
             {
-                if (!string.IsNullOrEmpty(RootFilePath))
+                ImGui.BeginChild("Tools child", _toolsChildSize, _childFlags);
+                _extractor.Render(_selected);
+                _injector.Render(_root, _selected);
+                if (ImGui.CollapsingHeader("Tools"))
                 {
-                    _extractor.Render(_selected);
-                    _injector.Render(_root, _selected);
-                    if (ImGui.CollapsingHeader("Tools"))
+                    if (ImGui.Button("Get flver list"))
                     {
-                        if (ImGui.Button("Get flver list"))
-                        {
-                            List<FileNode> newList = _treeTabsTools.NodeFlverFinder(_selected);
-                            _flverEditor.SetNewItemList(newList);
-                            _flverEditor.ShowWindow(true);
-                        }
-                        ImGui.Separator();
-                        _treeTabsTools.GetTexturesDoubles(_selected);
-                        _treeTabsTools.GetTexturesFormatErrors(_selected);
-                        ImGui.Separator();
-                        _treeTabsTexTools.ButtonAddTexture(_selected);
-                        _treeTabsTexTools.ButtonRemoveTexture(_selected);
-                        _treeTabsTexTools.ButtonRenameTexture(_selected);
-                        _treeTabsTexTools.ButtonReFlagTexture(_selected);
-                        ImGui.Spacing();
+                        List<FileNode> newList = _treeTabsTools.NodeFlverFinder(_selected);
+                        _flverEditor.SetNewItemList(newList);
+                        _flverEditor.ShowWindow(true);
                     }
+                    ImGui.Separator();
+                    _treeTabsTools.GetTexturesDoubles(_selected);
+                    _treeTabsTools.GetTexturesFormatErrors(_selected);
+                    ImGui.Separator();
+                    _treeTabsTexTools.ButtonAddTexture(_selected);
+                    _treeTabsTexTools.ButtonRemoveTexture(_selected);
+                    _treeTabsTexTools.ButtonRenameTexture(_selected);
+                    _treeTabsTexTools.ButtonReFlagTexture(_selected);
+                    ImGui.Spacing();
+                }
+                ImGui.EndChild();
+
+                ImGui.SetNextWindowSizeConstraints(_treeBrowserMinSize, _treeBrowserMaxSize);
+                ImGui.BeginChild(_childName, _treeBrowserSize, _childFlags);
+                {
                     _treeViewer.DrawBndTree(_root);
                 }
-                else
-                {
-                    ImGui.Text("No file loaded");
-                }
+                ImGui.EndChild();
+
+                ImGui.SameLine();
+
+                if (_ddsTexViewChild.IsShowChild())
+                    _ddsTexViewChild.Render(_gd, _cl, _selected);
+
+                if (_flverEditor.IsShowWindow())
+                    _flverEditor.Render();
+
+                ImGui.EndTabItem();
             }
-            ImGui.EndChild();
-
-            ImGui.SameLine();
-
-            if (_ddsTexViewChild.IsShowChild())
-                _ddsTexViewChild.Render(_gd, _cl, _selected);
-
-            if (_flverEditor.IsShowWindow())
-                _flverEditor.Render();
-
-            ImGui.EndTabItem();
         }
 
         public void SetRoot(string rootFilePath)

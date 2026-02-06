@@ -37,13 +37,13 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             _flverNameCorrector = new FlverNameCorrector(_windowName + " - Name corrector", false);
             _flverMTDReplacer = new FlverMTDReplacer(_windowName + " - MTDReplacer", false, _mtdList);
             _flverTexFinder = new FlverTexFinder(_windowName + " - Flver texture finder", false, _mtdList);
+
+            _flverEditorMTDWindow = new MTDWindow(_windowName + " - MTDEditor", false);
         }
 
         public FMW(string windowName, bool showWindow, Config config, List<MTDShortDetails> mtdList) : this(windowName, showWindow)
         {
             _config = config;
-            //_mtdWindow = new MTDWindow(_windowName + " - MTDEditor", false);
-            //_mtdWindow.SetMTDPath(_config);
             _mtdList = mtdList;
         }
 
@@ -53,8 +53,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         FlverTexFinder _flverTexFinder;
 
         FlverFileList _fileListViewer = new();
+        Vector2 _fileListSize;
         FlverMaterialList _flverMaterialList = new();
+        Vector2 _mtdListSize;
         FlverTextureList _flverTextureList = new();
+        Vector3 _flverTextureListSize;
 
         FileNode _selectedFile = new();
         FLVER2.Material _selectedMaterial = null;
@@ -62,6 +65,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         Config _config = new();
         //MTDWindow _mtdWindow;
         List<MTDShortDetails> _mtdList = [];
+        MTDWindow _flverEditorMTDWindow;
 
         private FLVER2 _currentFlver;
 
@@ -76,8 +80,8 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         private bool _isAddingTextureType = false;
 
         // Предопределенные типы текстур для выпадающего списка
-        private readonly List<string> _commonTextureTypes = new()
-        {
+        private readonly List<string> _commonTextureTypes =
+        [
             "g_Diffuse",
             "g_Diffuse_2",
             "g_Specular",
@@ -89,7 +93,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             "g_Height",
             "g_Subsurf",
             "g_Lightmap"
-        };
+        ];
 
         public override void Render()
         {
@@ -109,9 +113,9 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                     SaveChangesButton();
 
                     // Разделяем окно на три колонки
-                    ImGui.Columns(3, "FlverWindowColumns", true);
+                    //ImGui.Columns(3, "FlverWindowColumns", true);
 
-                    ImGui.BeginChild("FLVER Files:");
+                    ImGui.BeginChild("FLVER Files:", _fileListViewer.GetChildSize(), _childFlags);
                     {
                         // Первая колонка - список файлов
                         ImGui.Text("FLVER Files:");
@@ -120,9 +124,10 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                     }
                     ImGui.EndChild();
 
-                    ImGui.NextColumn();
+                    //ImGui.NextColumn();
+                    ImGui.SameLine();
 
-                    ImGui.BeginChild("MTD");
+                    ImGui.BeginChild("MTD", _flverMaterialList.GetChildSize(), _childFlags);
                     {
                         // Вторая колонка - список материалов и редактирование
                         ImGui.Text("Materials (by MTD):");
@@ -170,10 +175,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                         }
                     }
                     ImGui.EndChild();
-                    
-                    ImGui.NextColumn();
 
-                    ImGui.BeginChild("Textures");
+                    //ImGui.NextColumn();
+                    ImGui.SameLine();
+
+                    ImGui.BeginChild("Textures", _flverTextureList.GetChildSize(), _childFlags);
                     {
                         // Третья колонка - список текстур и редактирование
                         ImGui.Text("Textures:");
@@ -328,7 +334,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                     }
                     ImGui.EndChild();
                     
-                    ImGui.Columns(1); // Сбрасываем колонки
+                    //ImGui.Columns(1); // Сбрасываем колонки
                 }
                 ImGui.End();
             }
@@ -357,6 +363,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                         _flverTexFinder.ShowWindow(true);
                     }
 
+                    ImGui.EndMenu();
+                }
+                if (ImGui.BeginMenu("MTD editor"))
+                {
+                    _flverEditorMTDWindow.ShowWindow(true);
                     ImGui.EndMenu();
                 }
                 ImGui.EndMenuBar();

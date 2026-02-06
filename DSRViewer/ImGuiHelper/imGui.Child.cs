@@ -18,7 +18,7 @@ namespace DSRViewer.ImGuiHelper
         protected bool _showChild;
 
         protected Vector2 _minSize = new(0, 0);
-        protected Vector2 _maxSize = new(500, 500);
+        protected Vector2 _maxSize = new(-1, -1);
 
         public ImGuiChild() { }
         public ImGuiChild(string childName, bool showChild) : this()
@@ -77,5 +77,7 @@ namespace DSRViewer.ImGuiHelper
             _minSize = minSize;
             _maxSize = maxSize;
         }
+
+        public Vector2 GetChildSize() => _childSize;
     }
 }

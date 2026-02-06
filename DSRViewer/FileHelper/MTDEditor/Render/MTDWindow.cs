@@ -28,7 +28,7 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
             _config = config;
         }
 
-        Config _config = new();
+        Config _config;
 
         List<MTDShortDetails> mtdList = [];
         string _mtdDir = "";
@@ -91,7 +91,7 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
         {
             if (_showWindow)
             {
-                ImGui.Begin(_windowName, ref _showWindow, ImGuiWindowFlags.MenuBar);
+                ImGui.Begin(_windowName, ref _showWindow, _windowFlags | ImGuiWindowFlags.MenuBar);
                 {
                     if (ImGui.BeginMenuBar())
                     {
@@ -130,7 +130,7 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
                     }
 
                     // Левая панель - список MTD
-                    ImGui.BeginChild("MTD_List", new Vector2(400, -1));
+                    ImGui.BeginChild("MTD_List", new Vector2(400, -1), _childFlags);
                     {
                         ImGui.Text("Available MTDs:");
                         ImGui.Separator();
@@ -164,7 +164,7 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
                     ImGui.SameLine();
 
                     // Центральная панель - редактор параметров
-                    ImGui.BeginChild("MTD_Editor", new Vector2(500, -1));
+                    ImGui.BeginChild("MTD_Editor", new Vector2(500, -1), _childFlags);
                     {
                         if (currentMTD != null)
                         {
@@ -303,7 +303,7 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
                     ImGui.SameLine();
 
                     // Правая панель - список текстур
-                    ImGui.BeginChild("MTD_Textures", new Vector2(200, -1));
+                    ImGui.BeginChild("MTD_Textures", new Vector2(200, -1), _childFlags);
                     {
                         ImGui.Text("Texture Samplers:");
                         ImGui.Separator();
