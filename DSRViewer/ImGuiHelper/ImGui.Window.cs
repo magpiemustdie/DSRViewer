@@ -12,7 +12,7 @@ namespace DSRViewer.ImGuiHelper
 {
     public class ImGuiWindow
     {
-        protected ImGuiWindowFlags _windowFlags = ImGuiWindowFlags.AlwaysAutoResize;
+        protected ImGuiWindowFlags _windowFlags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoDocking;
         protected ImGuiChildFlags _childFlags = ImGuiChildFlags.Borders | ImGuiChildFlags.AutoResizeY | ImGuiChildFlags.AutoResizeX | ImGuiChildFlags.AlwaysAutoResize;
         protected string _windowName { get; set; } = "Window";
         protected Vector2 _windowSize { get; set; }

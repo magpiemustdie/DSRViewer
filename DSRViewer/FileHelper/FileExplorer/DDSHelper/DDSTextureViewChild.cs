@@ -6,6 +6,7 @@ using DSRViewer.FileHelper.FileExplorer.DDSHelper;
 using DSRViewer.ImGuiHelper;
 using DSRViewer.FileHelper;
 using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
+using System.Reflection;
 
 namespace DSRViewer.FileHelper.FileExplorer.DDSHelper
 {
@@ -61,8 +62,11 @@ namespace DSRViewer.FileHelper.FileExplorer.DDSHelper
             try
             {
                 var binders = new FileBinders();
-                binders.SetGetObjectOnly();
-                binders.Read(file.VirtualPath);
+                var operation = new FileOperation { GetObject = true };
+                binders.Clear();
+                binders.ProcessPaths([file.VirtualPath], operation);
+
+                var texture = binders.GetObject() as TPF.Texture;
 
                 if (binders.GetObject() is TPF.Texture textureData)
                 {

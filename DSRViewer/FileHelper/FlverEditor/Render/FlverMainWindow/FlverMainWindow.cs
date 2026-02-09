@@ -6,7 +6,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using DSRViewer.FileHelper.FileExplorer.Render;
 using DSRViewer.FileHelper.MTDEditor;
 using DSRViewer.ImGuiHelper;
 using ImGuiNET;
@@ -17,6 +16,7 @@ using DSRViewer.FileHelper.FlverEditor.Tools;
 using DSRViewer.FileHelper.MTDEditor.Render;
 using DSRViewer.FileHelper.flverTools.Tools;
 using DSRViewer.FileHelper.FlverEditor.Tools.FlverTexFinder;
+using DSRViewer.Core;
 
 namespace DSRViewer.FileHelper.FlverEditor.Render
 {
@@ -26,25 +26,30 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         {
             _windowName = windowName;
             _showWindow = showWindow;
+            _minSize = new(550, 900);
+            _maxSize = new(1500, 900);
 
-            _windowFlags = ImGuiWindowFlags.HorizontalScrollbar | ImGuiWindowFlags.MenuBar;
+
+            _windowFlags |= ImGuiWindowFlags.HorizontalScrollbar | ImGuiWindowFlags.MenuBar;
 
             _fileListViewer.OnFlverSelected += OnFlverFileSelected;
             _flverMaterialList.OnMaterialSelected += OnMaterialSelected;
             _flverTextureList.ClickHandlerMatTexture += OnTextureSelected;
 
-            _flverMTDFinder = new FlverMTDFinder(_windowName + " - MTDFinder", false);
+            _flverMTDFinder = new FlverMTDFinder(_windowName + " - MTDFinder (console)", false);
             _flverNameCorrector = new FlverNameCorrector(_windowName + " - Name corrector", false);
-            _flverMTDReplacer = new FlverMTDReplacer(_windowName + " - MTDReplacer", false, _mtdList);
+            _flverMTDReplacer = new FlverMTDReplacer(_windowName + " - MTDReplacer", false);
             _flverTexFinder = new FlverTexFinder(_windowName + " - Flver texture finder", false, _mtdList);
 
-            _flverEditorMTDWindow = new MTDWindow(_windowName + " - MTDEditor", false);
+            if (_config.MtdFolder == "")
+                _flverEditorMTDWindow = new MTDWindow(_windowName + " - MTDEditor", false);
         }
 
         public FMW(string windowName, bool showWindow, Config config, List<MTDShortDetails> mtdList) : this(windowName, showWindow)
         {
             _config = config;
             _mtdList = mtdList;
+            _flverEditorMTDWindow = new MTDWindow(_windowName + " - MTDEditor", false, _config);
         }
 
         FlverMTDFinder _flverMTDFinder;
@@ -53,17 +58,13 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         FlverTexFinder _flverTexFinder;
 
         FlverFileList _fileListViewer = new();
-        Vector2 _fileListSize;
         FlverMaterialList _flverMaterialList = new();
-        Vector2 _mtdListSize;
         FlverTextureList _flverTextureList = new();
-        Vector3 _flverTextureListSize;
 
         FileNode _selectedFile = new();
         FLVER2.Material _selectedMaterial = null;
         FLVER2.Texture _selectedTexture = null;
         Config _config = new();
-        //MTDWindow _mtdWindow;
         List<MTDShortDetails> _mtdList = [];
         MTDWindow _flverEditorMTDWindow;
 
@@ -99,6 +100,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         {
             if (_showWindow)
             {
+                ImGui.SetNextWindowSizeConstraints(_minSize, _maxSize);
                 ImGui.Begin(_windowName, ref _showWindow, _windowFlags);
                 {
                     //Меню
@@ -367,7 +369,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 }
                 if (ImGui.BeginMenu("MTD editor"))
                 {
-                    _flverEditorMTDWindow.ShowWindow(true);
+                    if (ImGui.MenuItem("Show MTD editor"))
+                    {
+                        _flverEditorMTDWindow.ShowWindow(true);
+                    }
+                    
                     ImGui.EndMenu();
                 }
                 ImGui.EndMenuBar();
@@ -378,8 +384,9 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
         {
             _flverMTDFinder.Render(_fileListViewer.GetFileList());
             _flverNameCorrector.Render(_fileListViewer.GetFileList());
-            _flverMTDReplacer.Render(_fileListViewer.GetFileList());
+            _flverMTDReplacer.Render(_fileListViewer.GetFileList(), _mtdList);
             _flverTexFinder.Render(_fileListViewer.GetFileList(), _mtdList);
+            _flverEditorMTDWindow.Render();
         }
 
         public void SetNewItem(FileNode fileNode)
@@ -538,7 +545,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             if (fileNode == null)
                 return;
 
-            if (fileNode.VirtualPath.Split("|").Last() != null)
+            if (fileNode.VirtualPath.Split("|").Last() != null) //wut??
             {
                 FileBinders binder = new();
                 binder.SetGetObjectOnly();
@@ -552,36 +559,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 _selectedFile = fileNode;
                 Console.WriteLine($"Loaded {_currentFlver.Materials.Count} materials from {fileNode.Name}");
             }
-
-            /*
-            try
-            {
-                string filePath = fileNode.VirtualPath;
-
-                if (!System.IO.File.Exists(filePath))
-                {
-                    Console.WriteLine($"File not found: {filePath}");
-                    return;
-                }
-
-                _currentFlver = FLVER2.Read(filePath);
-                _flverMaterialList.UpdateList(_currentFlver.Materials);
-                _flverTextureList.ClearList();
-                _selectedMaterial = null;
-                _selectedTexture = null;
-                _selectedFile = fileNode;
-
-                Console.WriteLine($"Loaded {_currentFlver.Materials.Count} materials from {fileNode.Name}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading FLVER file: {ex.Message}");
-                _flverMaterialList.ClearList();
-                _flverTextureList.ClearList();
-                _selectedMaterial = null;
-                _selectedTexture = null;
-            }
-            */
         }
 
         private void LoadTexturesForMaterial(FLVER2.Material material)

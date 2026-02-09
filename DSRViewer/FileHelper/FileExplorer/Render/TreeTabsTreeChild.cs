@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using DSRViewer.Core;
 using DSRViewer.FileHelper.FileExplorer.DDSHelper;
 using DSRViewer.FileHelper.FileExplorer.Tools;
 using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
@@ -26,6 +27,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         private FMW _flverEditor;
         private Extractor _extractor;
         private Injector _injector;
+        private Finder _finder;
         private Config _config;
         private List<MTDShortDetails> _mtdList;
 
@@ -44,6 +46,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             _ddsTexViewChild = new DDSTextureViewChild($"{childName} - DDSViewer", false);
             _extractor = new Extractor(_config);
             _injector = new Injector(OnInjectionComplete);
+            _finder = new();
             _treeTabsTexTools = new TreeTabsTexTools(OnInjectionComplete);
             _treeViewer.CurrentClickHandler = HandleFileNodeClick;
             SetRoot(rootFilePath);
@@ -63,6 +66,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
                 ImGui.BeginChild("Tools child", _toolsChildSize, _childFlags);
                 _extractor.Render(_selected);
                 _injector.Render(_root, _selected);
+                _finder.Render(_selected);
                 if (ImGui.CollapsingHeader("Tools"))
                 {
                     if (ImGui.Button("Get flver list"))
@@ -112,34 +116,51 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         {
             try
             {
-                Console.WriteLine($"Updating tree after injection for: {archivePath}");
+                Console.WriteLine($"Updating tree for: {archivePath}");
 
-                if (RootFilePath.Equals(archivePath, StringComparison.OrdinalIgnoreCase))
+                var pathParts = archivePath.Split("|");
+                var cleanPath = pathParts[0];
+
+                if (RootFilePath.Equals(cleanPath, StringComparison.OrdinalIgnoreCase))
                 {
                     _root = _builder.BuildTree(RootFilePath);
                 }
                 else
                 {
-                    UpdateArchiveNode(archivePath);
+                    var archiveNode = FindNodeByPath(_root, archivePath);
+                    if (archiveNode != null)
+                    {
+                        // Перестраиваем только этот узел, перестраивая с начала файла
+                        var updatedNode = _builder.BuildTree(archivePath.Split("|")[0]);
+                        var newNode = FindNodeByPath(updatedNode, archivePath);
+                        if (newNode != null)
+                            WriteRootUpdate(_root, newNode);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Node not found for path: {archivePath}");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error updating tree after injection: {ex.Message}");
+                Console.WriteLine($"Error updating tree: {ex.Message}");
             }
         }
 
-        private void UpdateArchiveNode(string archivePath)
+        private void WriteRootUpdate(FileNode root, FileNode newNode)
         {
-            var archiveNode = FindNodeByPath(_root, archivePath);
-
-            if (archiveNode != null)
+            for (int i = 0; i < root.Children.Count; i++)
             {
-                var newNode = _builder.BuildTree(archivePath.Split("|")[0]);
-
-                if (newNode != null)
+                if (root.Children[i].VirtualPath == newNode.VirtualPath)
                 {
-                    _root = newNode;
+                    root.Children[i] = newNode;
+                    Console.WriteLine($"FileNode path {newNode.VirtualPath} -> {root.Children[i].VirtualPath}");
+                }
+                else
+                {
+                    // Рекурсивно обновляем поддерево
+                    WriteRootUpdate(root.Children[i], newNode);
                 }
             }
         }
@@ -157,7 +178,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             }
 
             return null;
-        }
+        } 
 
         private void HandleFileNodeClick(FileNode item)
         {

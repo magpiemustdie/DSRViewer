@@ -43,9 +43,12 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools.FlverTexFinder
 
         public void AddMaterial(string materialPath)
         {
-            _materialPaths.Add(materialPath);
-            _items.Add(materialPath);
-            _ids.Add(_materialPaths.Count - 1);
+            if (!_materialPaths.Contains(materialPath))
+            {
+                _materialPaths.Add(materialPath);
+                _items.Add(materialPath);
+                _ids.Add(_materialPaths.Count - 1);
+            }
         }
 
         public override void Clear()

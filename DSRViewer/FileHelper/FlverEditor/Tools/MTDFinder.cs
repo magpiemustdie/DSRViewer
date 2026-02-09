@@ -12,7 +12,7 @@ using DSRViewer.ImGuiHelper;
 
 namespace DSRViewer.FileHelper.FlverEditor.Tools
 {
-    internal class FlverMTDFinder : ImGuiWindow
+    public class FlverMTDFinder : ImGuiWindow
     {
         string _mtdNameFinder = string.Empty;
         FlverTools _flverTools = new();
@@ -27,9 +27,9 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
         {
             if (_showWindow)
             {
-                ImGui.Begin("MTD_Finder_window", ref _showWindow);
+                ImGui.Begin(_windowName, ref _showWindow, _windowFlags);
                 {
-                    ImGui.BeginChild("Cld_MTDFW", new Vector2(500, 500), _childFlags);
+                    ImGui.BeginChild("Cld_MTDFW", new Vector2(0, 0), _childFlags);
                     {
                         ImGui.SetNextItemWidth(300);
                         ImGui.InputText($"mtd_finder", ref _mtdNameFinder, 255);

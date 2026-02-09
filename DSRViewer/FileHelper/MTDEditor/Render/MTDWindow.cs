@@ -9,7 +9,7 @@ using SoulsFormats;
 using DSRViewer.ImGuiHelper;
 using System.Windows.Forms;
 using System.IO;
-using DSRViewer.FileHelper.FileExplorer.Render;
+using DSRViewer.Core;
 
 namespace DSRViewer.FileHelper.MTDEditor.Render
 {
@@ -19,16 +19,18 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
         {
             _windowName = windowName;
             _showWindow = showWindow;
+            _minSize = new(700, 700);
+            _maxSize = new(1500, 900);
         }
 
-        public MTDWindow(string windowName, bool showWindow, Config config)
+        public MTDWindow(string windowName, bool showWindow, Config config) : this(windowName, showWindow)
         {
-            _windowName = windowName;
-            _showWindow = showWindow;
             _config = config;
+            _mtdDir = _config.MtdFolder;
+            UpdateLists();
         }
 
-        Config _config;
+        Config _config = new();
 
         List<MTDShortDetails> mtdList = [];
         string _mtdDir = "";
@@ -53,44 +55,11 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
 
         private bool hasUnsavedChanges = false;
 
-        private string SetMTDDir()
-        {
-            var file = "";
-            var thread = new Thread(() =>
-            {
-                using (var folderDialog = new FolderBrowserDialog())
-                {
-                    folderDialog.Description = "Select MTD directory";
-                    folderDialog.UseDescriptionForTitle = true;
-                    if (folderDialog.ShowDialog() == DialogResult.OK)
-                    {
-                        file = folderDialog.SelectedPath;
-                    }
-                }
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
-
-            return file;
-        }
-
-        public void SetMTDPath(string mtdPath)
-        {
-            _mtdDir = mtdPath;
-            UpdateLists();
-        }
-
-        public void SetMTDPath(Config config)
-        {
-            _mtdDir = config.MtdFolder;
-            UpdateLists();
-        }
-
         public override void Render()
         {
             if (_showWindow)
             {
+                ImGui.SetNextWindowSizeConstraints(_minSize, _maxSize);
                 ImGui.Begin(_windowName, ref _showWindow, _windowFlags | ImGuiWindowFlags.MenuBar);
                 {
                     if (ImGui.BeginMenuBar())
@@ -111,16 +80,6 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
                             if (ImGui.MenuItem("Save Changes", "", false, hasUnsavedChanges))
                             {
                                 SaveChanges();
-                            }
-
-                            ImGui.EndMenu();
-                        }
-
-                        if (ImGui.BeginMenu("Tools"))
-                        {
-                            if (ImGui.MenuItem("Unpack all MTDs"))
-                            {
-                                mtdTools.Unpack(Path.Combine(_mtdDir, "mtd.mtdbnd"));
                             }
 
                             ImGui.EndMenu();
@@ -345,6 +304,42 @@ namespace DSRViewer.FileHelper.MTDEditor.Render
                 ImGui.End();
             }
         }
+
+        private string SetMTDDir()
+        {
+            var file = "";
+            var thread = new Thread(() =>
+            {
+                using (var folderDialog = new FolderBrowserDialog())
+                {
+                    folderDialog.Description = "Select MTD directory";
+                    folderDialog.UseDescriptionForTitle = true;
+                    if (folderDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        file = folderDialog.SelectedPath;
+                    }
+                }
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+
+            return file;
+        }
+
+        public void SetMTDPath(string mtdPath)
+        {
+            _mtdDir = mtdPath;
+            UpdateLists();
+        }
+
+        public void SetMTDPath(Config config)
+        {
+            _mtdDir = config.MtdFolder;
+            UpdateLists();
+        }
+
+        
 
         public void UpdateLists()
         {

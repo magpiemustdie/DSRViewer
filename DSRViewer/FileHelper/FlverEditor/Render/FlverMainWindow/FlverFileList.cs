@@ -11,6 +11,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
 {
     public class FlverFileList : ImGuiClickableList
     {
+        public FlverFileList()
+        {
+            _childSize = new(0, -1);
+        }
+
         List<FileNode> _fileNodes = [];
 
         // Добавляем событие для уведомления о выборе FLVER-файла

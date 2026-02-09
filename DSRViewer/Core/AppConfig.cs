@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Windows.Forms;
 
-namespace DSRViewer.FileHelper.FileExplorer.Render
+namespace DSRViewer.Core
 {
     public class Config
     {

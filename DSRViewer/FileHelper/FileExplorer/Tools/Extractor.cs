@@ -4,9 +4,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using DSRViewer.FileHelper.FileExplorer.Render;
+using DSRViewer.Core;
 using DSRViewer.ImGuiHelper;
 using ImGuiNET;
+using SoulsFormats;
 
 namespace DSRViewer.FileHelper.FileExplorer.Tools
 {
@@ -43,20 +44,45 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                         Console.WriteLine("Extract folder not set!");
                         return;
                     }
-                    Extract(selected);
+
+                    ExtractFile(selected.VirtualPath, _config.ExtractFolder);
                 }
             }
         }
 
+        public static void ExtractFile(string sourcePath, string outputDir)
+        {
+            var binder = new FileBinders();
+            var operation = new FileOperation { GetObject = true };
+
+            binder.ProcessPaths(new[] { sourcePath }, operation);
+            var obj = binder.GetObject();
+
+            if (obj is BinderFile file)
+            {
+                File.WriteAllBytes(Path.Combine(outputDir, "extracted.dat"), file.Bytes);
+            }
+            else if (obj is TPF.Texture texture)
+            {
+                File.WriteAllBytes(Path.Combine(outputDir, "texture.dds"), texture.Bytes);
+            }
+            else if (obj is FLVER2 flver)
+            {
+                flver.Write(Path.Combine(outputDir, "model.flver"));
+            }
+        }
+
+        /*
         private void Extract(FileNode selected)
         {
             Console.WriteLine($"Start extraction...{selected.VirtualPath}");
             FileBinders binder = new();
             binder.SetGetObjectOnly();
-            binder.Read(selected.VirtualPath);
-            binder.Extract(_config.ExtractFolder, selected.Name);
+            binder.Read(selected.VirtualPath, operation);
+            binder.ExtractFile(_config.ExtractFolder, selected.Name);
             Console.WriteLine($"Done...{selected.VirtualPath}");
         }
+        */
 
         public void SetExtractFolder()
         {

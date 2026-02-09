@@ -62,7 +62,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools.FlverTexFinder
                 {
                     if (ImGui.Button("Texture finder"))
                     {
-                        FindTextures(flverFileList, mtdList);
+                        FindTextures(flverFileList);
                     }
 
                     ImGui.SetNextItemWidth(300);
@@ -78,11 +78,8 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools.FlverTexFinder
             }
         }
 
-        private void FindTextures(List<FileNode> flverFileList, List<MTDShortDetails> mtdList)
+        private void FindTextures(List<FileNode> flverFileList)
         {
-            // Также сохраняем здесь на случай, если Render не вызывался
-            _mtdList = mtdList;
-
             _modelFinderList.Clear();
             _mtdFinderList.Clear();
             _mtdTexTypeList.Clear();
@@ -110,7 +107,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools.FlverTexFinder
                 }
             }
 
-            _mtdFinderList.UpdateMtdTypes(mtdList);
+            _mtdFinderList.UpdateMtdTypes(_mtdList);
         }
 
         private void AddMaterialsFromFlver(List<FLVER2.Material> flver_materials)

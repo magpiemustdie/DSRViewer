@@ -27,7 +27,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
         {
             if (_showWindow)
             {
-                ImGui.Begin("Tex_corrector_window", ref _showWindow, ImGuiWindowFlags.MenuBar);
+                ImGui.Begin(_windowName, ref _showWindow, ImGuiWindowFlags.MenuBar | _windowFlags);
                 {
                     Cld_MenuBar(flverfilelist);
                     Cld_NameCorrector(flverfilelist);
@@ -100,7 +100,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                         }
                     }
 
-                    if (ImGui.MenuItem("Find"))
+                    if (ImGui.MenuItem("Find errors"))
                     {
                         List<string> bug_List = [];
                         foreach (var file in flverfilelist)
@@ -137,7 +137,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
 
         private void Cld_NameCorrector(List<FileNode> flverfilelist)
         {
-            ImGui.BeginChild("Cld_TCW", new Vector2(500, 500), _childFlags);
+            ImGui.BeginChild("Cld_TCW", new Vector2(0, 0), _childFlags);
             {
                 ImGui.SetNextItemWidth(300);
                 ImGui.InputText($"Set g_type", ref texgtype, 100);

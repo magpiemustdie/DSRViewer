@@ -6,7 +6,7 @@ using SoulsFormats;
 
 namespace DSRViewer.FileHelper
 {
-    public class FileBinders
+    public class FileBindersSolo
     {
         private object? _mainObject;
         private bool _get, _write, _replace;
@@ -49,13 +49,6 @@ namespace DSRViewer.FileHelper
             _ddsName = name;
         }
 
-        // Быстрые методы для часто используемых операций
-        /*
-        public void SetGetObjectOnly() => _get = true;
-        public void SetWriteOnly() => _write = true;
-        public void SetReplaceOnly(byte[] newBytes) => (_replace, _newBytes) = (true, newBytes);
-        public void SetFlverReplace(FLVER2 newFlv) => (_flvReplace, _newFlv) = (true, newFlv);
-        */
         public void SetGetObjectOnly() => _get = true;
         public object? GetObject() => _mainObject;
         public void Clear() => _mainObject = null;
@@ -216,14 +209,25 @@ namespace DSRViewer.FileHelper
         private static byte[] WriteSafe(FLVER2 f, string n, byte[] b)
         {
             try { return f.Write(); }
-            catch { return b; }
+            catch {
+                Console.WriteLine("Problematic FLVER");
+                File.AppendAllText("problematic_flvers.txt", $"{n}{Environment.NewLine}");
+                return b; }
         }
 
         private static void WriteSafe(FLVER2 f, string p)
         {
             var b = File.ReadAllBytes(p);
-            try { f.Write(p); }
-            catch { File.WriteAllBytes(p, b); }
+            try
+            {
+                f.Write(p);
+            }
+            catch
+            {
+                Console.WriteLine("Problematic FLVER");
+                File.AppendAllText("problematic_flvers.txt", $"{p}{Environment.NewLine}");
+                File.WriteAllBytes(p, b);
+            }
         }
 
         // Вспомогательные методы для проверки типов файлов с учетом DCX
@@ -258,7 +262,15 @@ namespace DSRViewer.FileHelper
                 case TPF.Texture d:
                     var n = vPath != null ? $"{vPath.Replace("\\", "#").Replace("|", "~")};{Path.GetFileName(name)}.dds" : p + ".dds";
                     File.WriteAllBytes(Path.Combine(dir, n), d.Bytes); break;
-                case FLVER2 f: f.Write(p); break;
+                case FLVER2 f:
+                    {
+                        try { f.Write(p); }
+                        catch { 
+                            Console.WriteLine("Problematic FLVER");
+                            File.AppendAllText("problematic_flvers.txt", $"{name}{Environment.NewLine}");
+                        }
+                        break;
+                    }
             }
         }
     }

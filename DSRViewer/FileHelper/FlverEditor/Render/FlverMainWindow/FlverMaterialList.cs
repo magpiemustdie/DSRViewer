@@ -11,6 +11,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
 {
     public class FlverMaterialList : ImGuiClickableList
     {
+        public FlverMaterialList()
+        {
+            _childSize = new(0, -1);
+        }
+
         List<FLVER2.Material> _flverMaterials = [];
 
         public event Action<FLVER2.Material> OnMaterialSelected;

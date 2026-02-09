@@ -12,6 +12,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
 {
     public class FlverTextureList : ImGuiClickableList
     {
+        public FlverTextureList()
+        {
+            _childSize = new(0, -1);
+        }
+
         List<FLVER2.Texture> _textures = [];
 
         public override void Render()

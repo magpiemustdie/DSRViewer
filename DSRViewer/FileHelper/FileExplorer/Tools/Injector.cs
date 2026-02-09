@@ -45,9 +45,9 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
 
                         if (_success)
                         {
-                            _onInjectionComplete?.Invoke(selected.VirtualPath.Split('|')[0]);
+                            _onInjectionComplete?.Invoke(selected.VirtualPath);
 
-                            ImGui.OpenPopup("InjectionSuccess");
+                            ImGui.OpenPopup($"InjectionSuccess - {selected.VirtualPath}");
                         }
                         else
                         {
@@ -129,7 +129,6 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     binder.Read(selected.VirtualPath);
                     success = true;
                 }
-
             }
             catch (Exception ex)
             {
@@ -140,6 +139,8 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             Console.WriteLine($"Injection {(success ? "completed successfully" : "failed")}");
             return success;
         }
+
+        
 
         private string SelectNewFile()
         {

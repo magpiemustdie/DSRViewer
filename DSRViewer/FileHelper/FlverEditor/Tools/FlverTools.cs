@@ -36,8 +36,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
             FileBinders binders = new();
             if (!(flver == null | materials == null))
             {
-
-
                 for (int i = 0; i < flver.Materials.Count; i++)
                 {
                     flver.Materials[i].MTD = materials[i].MTD;
@@ -154,9 +152,9 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
             {
                 for (int j = 0; j < materials[i].Textures.Count; j++)
                 {
-                    if (materials[i].Textures[j].Path.Split("\\").Last().ToLower() == texpattern.ToLower())
+                    if (materials[i].Textures[j].Path.Split("\\").Last().Equals(texpattern, StringComparison.CurrentCultureIgnoreCase))
                     {
-                        if (materials[i].MTD.Split("\\").Last().ToLower() == mtdpattern.ToLower())
+                        if (materials[i].MTD.Split("\\").Last().Equals(mtdpattern, StringComparison.CurrentCultureIgnoreCase))
                         {
                             materials[i].MTD = materials[i].MTD.Replace(mtdpattern, mtdnewname);
 

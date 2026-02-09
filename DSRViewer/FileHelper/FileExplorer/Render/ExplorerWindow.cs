@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using DSRViewer.Core;
 using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
 using DSRViewer.FileHelper.MTDEditor.Render;
 using DSRViewer.ImGuiHelper;

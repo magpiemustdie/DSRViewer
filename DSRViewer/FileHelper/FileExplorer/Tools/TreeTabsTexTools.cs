@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ImGuiNET;
 
@@ -22,13 +23,13 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
         {
             if (ImGui.Button("Add texture"))
             {
-                if (selected.IsNestedTpfArchive)
+                if (selected.IsNestedTpfArchive || selected.IsTpfArchive)
                 {
                     FileBinders binders = new();
                     binders.SetDds(true, false, false);
                     binders.SetCommon(false, true);
                     binders.Read(selected.VirtualPath);
-                    _onInjectionComplete?.Invoke(selected.VirtualPath.Split('|')[0]);
+                    _onInjectionComplete?.Invoke(selected.VirtualPath);
                 }
             }
         }
@@ -42,7 +43,11 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     binders.SetDds(false, true, false);
                     binders.SetCommon(false, true);
                     binders.Read(selected.VirtualPath);
-                    _onInjectionComplete?.Invoke(selected.VirtualPath.Split('|')[0]);
+
+                    var tempVirtualPath = selected.VirtualPath;
+                    tempVirtualPath = tempVirtualPath[..tempVirtualPath.LastIndexOf('|')];
+
+                    _onInjectionComplete?.Invoke(tempVirtualPath);
                 }
             }
         }
@@ -57,7 +62,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     binders.SetDds(false, false, false, true, false, (byte)selected.DDSFormatFlag, _texName);
                     binders.SetCommon(false, true);
                     binders.Read(selected.VirtualPath);
-                    _onInjectionComplete?.Invoke(selected.VirtualPath.Split('|')[0]);
+                    _onInjectionComplete?.Invoke(selected.VirtualPath);
                 }
             }
 
@@ -75,12 +80,12 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     binders.SetDds(false, false, false, false, true, (byte)_texFlag, selected.Name);
                     binders.SetCommon(false, true);
                     binders.Read(selected.VirtualPath);
-                    _onInjectionComplete?.Invoke(selected.VirtualPath.Split('|')[0]);
+                    _onInjectionComplete?.Invoke(selected.VirtualPath);
                 }
             }
 
             ImGui.SameLine();
-            ImGui.InputInt("Flag", ref _texFlag, 255);
+            ImGui.InputInt("Flag", ref _texFlag, 1);
         }
     }
 }
