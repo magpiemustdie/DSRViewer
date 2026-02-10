@@ -1,91 +1,203 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using ImGuiNET;
 
 namespace DSRViewer.FileHelper.FileExplorer.Tools
 {
     internal class TreeTabsTexTools
     {
-        private Action<string> _onInjectionComplete; // Колбэк для обновления дерева
-        private string _texName = "";
-        private int _texFlag = 0;
-        private bool _rename = false;
-        private bool _replaceFlag = false;
+        private readonly Action<string> _onInjectionComplete;
+
+        // Поля для операций с текстурами
+        private string _newTextureName = "";
+        private string _renameTextureName = "";
+        private string _newArchiveName = "";
+        private int _textureFormatFlag = 0;
+        private bool _renameOperation = false;
+        private bool _replaceFlagOperation = false;
+
         public TreeTabsTexTools(Action<string> onInjectionComplete = null)
         {
             _onInjectionComplete = onInjectionComplete;
         }
-        public void ButtonAddTexture(FileNode selected)
+
+        public void RenderAddTextureControls(FileNode selectedNode)
         {
-            if (ImGui.Button("Add texture"))
-            {
-                if (selected.IsNestedTpfArchive || selected.IsTpfArchive)
-                {
-                    FileBinders binders = new();
-                    binders.SetDds(true, false, false);
-                    binders.SetCommon(false, true);
-                    binders.Read(selected.VirtualPath);
-                    _onInjectionComplete?.Invoke(selected.VirtualPath);
-                }
-            }
-        }
-        public void ButtonRemoveTexture(FileNode selected)
-        {
-            if (ImGui.Button("Remove texture"))
-            {
-                if (selected.IsNestedDDS)
-                {
-                    FileBinders binders = new();
-                    binders.SetDds(false, true, false);
-                    binders.SetCommon(false, true);
-                    binders.Read(selected.VirtualPath);
+            if (selectedNode == null || !(selectedNode.IsNestedTpfArchive || selectedNode.IsTpfArchive))
+                return;
 
-                    var tempVirtualPath = selected.VirtualPath;
-                    tempVirtualPath = tempVirtualPath[..tempVirtualPath.LastIndexOf('|')];
-
-                    _onInjectionComplete?.Invoke(tempVirtualPath);
-                }
-            }
-        }
-
-        public void ButtonRenameTexture(FileNode selected)
-        {
-            if (ImGui.Button("Rename texture"))
-            {
-                if (selected.IsNestedDDS)
-                {
-                    FileBinders binders = new();
-                    binders.SetDds(false, false, false, true, false, (byte)selected.DDSFormatFlag, _texName);
-                    binders.SetCommon(false, true);
-                    binders.Read(selected.VirtualPath);
-                    _onInjectionComplete?.Invoke(selected.VirtualPath);
-                }
-            }
-
+            ImGui.InputText("Texture Name", ref _newTextureName, 255);
             ImGui.SameLine();
-            ImGui.InputText("Name", ref _texName, 255);
+
+            if (ImGui.Button("Add Texture"))
+            {
+                AddTexture(selectedNode);
+            }
         }
 
-        public void ButtonReFlagTexture(FileNode selected)
+        public void RenderRemoveTextureControls(FileNode selectedNode)
         {
-            if (ImGui.Button("Set format flag"))
+            if (selectedNode == null || !selectedNode.IsNestedDDS)
+                return;
+
+            if (ImGui.Button("Remove Texture"))
             {
-                if (selected.IsNestedDDS)
-                {
-                    FileBinders binders = new();
-                    binders.SetDds(false, false, false, false, true, (byte)_texFlag, selected.Name);
-                    binders.SetCommon(false, true);
-                    binders.Read(selected.VirtualPath);
-                    _onInjectionComplete?.Invoke(selected.VirtualPath);
-                }
+                RemoveTexture(selectedNode);
+            }
+        }
+
+        public void RenderRenameTextureControls(FileNode selectedNode)
+        {
+            if (selectedNode == null || !selectedNode.IsNestedDDS)
+                return;
+
+            ImGui.InputText("New Name", ref _renameTextureName, 255);
+            ImGui.SameLine();
+
+            if (ImGui.Button("Rename Texture"))
+            {
+                RenameTexture(selectedNode);
+            }
+        }
+
+        public void RenderReFlagTextureControls(FileNode selectedNode)
+        {
+            if (selectedNode == null || !selectedNode.IsNestedDDS)
+                return;
+
+            ImGui.InputInt("Format Flag", ref _textureFormatFlag, 1);
+            ImGui.SameLine();
+
+            if (ImGui.Button("Set Format Flag"))
+            {
+                ReFlagTexture(selectedNode);
+            }
+        }
+
+        public void RenderAddDcxTpfControls(FileNode selectedNode)
+        {
+            if (selectedNode == null || !(selectedNode.IsBxfArchive || selectedNode.IsNestedBxfArchive))
+                return;
+
+            ImGui.InputText("Archive Name", ref _newArchiveName, 255);
+            ImGui.InputText("Texture Name", ref _newTextureName, 255);
+            ImGui.SameLine();
+
+            if (ImGui.Button("Add DCX TPF"))
+            {
+                AddDcxTpf(selectedNode);
+            }
+        }
+
+        private void AddTexture(FileNode selectedNode)
+        {
+            if (string.IsNullOrEmpty(_newTextureName))
+            {
+                // Можно добавить сообщение об ошибке
+                return;
             }
 
-            ImGui.SameLine();
-            ImGui.InputInt("Flag", ref _texFlag, 1);
+            var binder = new FileBinders();
+            var operation = new FileOperation
+            {
+                Write = true,
+                AddTexture = true,
+                NewTextureName = _newTextureName
+            };
+
+            binder.ProcessPaths(new[] { selectedNode.VirtualPath }, operation);
+            _onInjectionComplete?.Invoke(selectedNode.VirtualPath);
+        }
+
+        private void RemoveTexture(FileNode selectedNode)
+        {
+            var binder = new FileBinders();
+            var operation = new FileOperation
+            {
+                Write = true,
+                RemoveTexture = true
+            };
+
+            binder.ProcessPaths(new[] { selectedNode.VirtualPath }, operation);
+
+            // Обновляем родительский путь
+            var parentVirtualPath = selectedNode.VirtualPath[..selectedNode.VirtualPath.LastIndexOf('|')];
+            _onInjectionComplete?.Invoke(parentVirtualPath);
+        }
+
+        private void RenameTexture(FileNode selectedNode)
+        {
+            if (string.IsNullOrEmpty(_renameTextureName))
+            {
+                // Можно добавить сообщение об ошибке
+                return;
+            }
+
+            var binder = new FileBinders();
+            var operation = new FileOperation
+            {
+                Write = true,
+                RenameTexture = true,
+                NewTextureName = _renameTextureName
+            };
+
+            binder.ProcessPaths(new[] { selectedNode.VirtualPath }, operation);
+            _onInjectionComplete?.Invoke(selectedNode.VirtualPath);
+        }
+
+        private void ReFlagTexture(FileNode selectedNode)
+        {
+            var binder = new FileBinders();
+            var operation = new FileOperation
+            {
+                Write = true,
+                ChangeTextureFormat = true,
+                NewTextureFormat = (byte)_textureFormatFlag
+            };
+
+            binder.ProcessPaths(new[] { selectedNode.VirtualPath }, operation);
+            _onInjectionComplete?.Invoke(selectedNode.VirtualPath);
+        }
+
+        private void AddDcxTpf(FileNode selectedNode)
+        {
+            if (string.IsNullOrEmpty(_newArchiveName) || string.IsNullOrEmpty(_newTextureName))
+            {
+                // Можно добавить сообщение об ошибке
+                return;
+            }
+
+            var binder = new FileBinders();
+            var operation = new FileOperation
+            {
+                Write = true,
+                AddTpfDcx = true,
+                AddTexture = true,
+                NewTpfDcxArchiveName = _newArchiveName,
+                NewTextureName = _newTextureName
+            };
+
+            binder.ProcessPaths(new[] { selectedNode.VirtualPath }, operation);
+            _onInjectionComplete?.Invoke(selectedNode.VirtualPath);
+
+            // Очищаем поля после операции
+            _newArchiveName = "";
+            _newTextureName = "";
+        }
+
+        // Метод для отрисовки всех элементов управления
+        public void RenderAllControls(FileNode selectedNode)
+        {
+            if (selectedNode == null)
+                return;
+
+            ImGui.Separator();
+            ImGui.Text("Texture Operations:");
+
+            RenderAddTextureControls(selectedNode);
+            RenderRemoveTextureControls(selectedNode);
+            RenderRenameTextureControls(selectedNode);
+            RenderReFlagTextureControls(selectedNode);
+            RenderAddDcxTpfControls(selectedNode);
         }
     }
 }

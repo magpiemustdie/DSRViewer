@@ -8,7 +8,9 @@ using DSRViewer.FileHelper.FlverEditor.Render;
 using DSRViewer.FileHelper.MTDEditor.Render;
 using DSRViewer.ImGuiHelper;
 using ImGuiNET;
+using SoulsFormats;
 using Veldrid;
+using Veldrid.Sdl2;
 
 namespace DSRViewer.FileHelper.FileExplorer.Render
 {
@@ -65,24 +67,40 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             {
                 ImGui.BeginChild("Tools child", _toolsChildSize, _childFlags);
                 _extractor.Render(_selected);
+                ImGui.Separator();
                 _injector.Render(_root, _selected);
+                ImGui.Separator();
                 _finder.Render(_selected);
+                ImGui.Separator();
                 if (ImGui.CollapsingHeader("Tools"))
                 {
                     if (ImGui.Button("Get flver list"))
                     {
                         List<FileNode> newList = _treeTabsTools.NodeFlverFinder(_selected);
+
                         _flverEditor.SetNewItemList(newList);
                         _flverEditor.ShowWindow(true);
                     }
-                    ImGui.Separator();
+                    ImGui.SameLine();
+                    if (ImGui.Button("Get tex list"))
+                    {
+                        List<FileNode> newList = _treeTabsTools.NodeTexFinder(_selected);
+                        List<string> texList = newList
+                        .Select(fileNode => fileNode.VirtualPath)
+                        .ToList();
+                        var binder = new FileBinders();
+                        var op = new FileOperation
+                        {
+                            GetObject = true
+                        };
+                        binder.ProcessPaths(texList, op);
+                    }
+                    ImGui.SameLine();
                     _treeTabsTools.GetTexturesDoubles(_selected);
+                    ImGui.SameLine();
                     _treeTabsTools.GetTexturesFormatErrors(_selected);
                     ImGui.Separator();
-                    _treeTabsTexTools.ButtonAddTexture(_selected);
-                    _treeTabsTexTools.ButtonRemoveTexture(_selected);
-                    _treeTabsTexTools.ButtonRenameTexture(_selected);
-                    _treeTabsTexTools.ButtonReFlagTexture(_selected);
+                    _treeTabsTexTools.RenderAllControls(_selected);
                     ImGui.Spacing();
                 }
                 ImGui.EndChild();

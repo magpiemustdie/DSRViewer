@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -107,6 +108,53 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     if (DDS_FlagFormatList.DDSFlagListSet.ContainsKey(imageFormat))
                         imageFlag = Convert.ToByte(DDS_FlagFormatList.DDSFlagListSet[imageFormat]);
 
+                    var binder = new FileBinders();
+                    var operation = new FileOperation
+                    {
+                        Write = true,
+                        ReplaceTexture = true,
+                        ChangeTextureFormat = true,
+                        NewTextureBytes = newBytes,
+                        NewTextureFormat = imageFlag,
+                        NewTextureName = selected.Name
+                    };
+                    binder.ProcessPaths(new[] {selected.VirtualPath}, operation);
+                    success = true;
+                }
+
+                else if (selected.IsFlver || selected.IsNestedFlver)
+                {
+                    var binder = new FileBinders();
+                    var operation = new FileOperation
+                    {
+                        Write = true,
+                        ReplaceFlver = true,
+                        WriteFlver = true,
+                        NewFlver = FLVER2.Read(newBytes),
+                    };
+                    binder.ProcessPaths(new[] { selected.VirtualPath }, operation); ;
+                    success = true;
+                }
+                else
+                {
+                    var binder = new FileBinders();
+                    var operation = new FileOperation
+                    {
+                        Write = true,
+                        Replace = true,
+                        NewBytes = newBytes
+                    };
+                    binder.ProcessPaths(new[] { selected.VirtualPath }, operation); ;
+                    success = true;
+                }
+                /*
+                if (selected.IsNestedDDS)
+                {
+                    byte imageFlag = 128;
+                    string imageFormat = DDSTools.ReadDDSImageFormat(newBytes);
+                    if (DDS_FlagFormatList.DDSFlagListSet.ContainsKey(imageFormat))
+                        imageFlag = Convert.ToByte(DDS_FlagFormatList.DDSFlagListSet[imageFormat]);
+                    
                     FileBinders binder = new();
                     binder.SetCommon(false, true, false);
                     binder.SetDds(false, false, true, true, true, imageFlag, selected.Name, newBytes);
@@ -129,6 +177,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     binder.Read(selected.VirtualPath);
                     success = true;
                 }
+                */
             }
             catch (Exception ex)
             {

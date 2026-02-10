@@ -33,7 +33,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
 
         public void FlverWriter(FLVER2 flver, List<FLVER2.Material> materials, string virtualPath) //Flver writer
         {
-            FileBinders binders = new();
             if (!(flver == null | materials == null))
             {
                 for (int i = 0; i < flver.Materials.Count; i++)
@@ -51,9 +50,15 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
 
                     flver.Materials[i].Textures = materials[i].Textures;
                 }
-                binders.SetFlver(true, true, flver);
-                binders.SetCommon(false, true);
-                binders.Read(virtualPath);
+                var binder = new FileBinders();
+                var operation = new FileOperation
+                {
+                    Write = true,
+                    ReplaceFlver = true,
+                    WriteFlver = true,
+                    NewFlver = flver
+                };
+                binder.ProcessPaths(new[] { virtualPath }, operation);
                 Console.WriteLine("Write Done");
             }
         }
@@ -421,12 +426,10 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                 {
                     if (tex.Path.ToLower().EndsWith("_s.tga"))
                     {
-                        Console.WriteLine($"...Upper to lower: {tex.Path}");
                         tex.Path = Regex.Split(tex.Path, "_s.tga", RegexOptions.IgnoreCase)[0] + "_s.tga";
                     }
                     if (tex.Path.ToLower().EndsWith("_n.tga"))
                     {
-                        Console.WriteLine($"...Upper to lower: {tex.Path}");
                         tex.Path = Regex.Split(tex.Path, "_n.tga", RegexOptions.IgnoreCase)[0] + "_n.tga";
                     }
                 }

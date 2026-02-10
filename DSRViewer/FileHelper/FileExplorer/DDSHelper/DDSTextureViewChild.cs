@@ -61,14 +61,14 @@ namespace DSRViewer.FileHelper.FileExplorer.DDSHelper
 
             try
             {
-                var binders = new FileBinders();
+                var binder = new FileBinders();
                 var operation = new FileOperation { GetObject = true };
-                binders.Clear();
-                binders.ProcessPaths([file.VirtualPath], operation);
+                binder.Clear();
+                binder.ProcessPaths([file.VirtualPath], operation);
 
-                var texture = binders.GetObject() as TPF.Texture;
+                var texture = binder.GetObject() as TPF.Texture;
 
-                if (binders.GetObject() is TPF.Texture textureData)
+                if (binder.GetObject() is TPF.Texture textureData)
                 {
                     var textureLoader = new DDSTools();
                     textureLoader.LoadDDSImage(textureData.Bytes, gd, out _texture, out _textureView);

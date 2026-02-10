@@ -144,6 +144,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
 
                             if (!_isEditingMTD)
                             {
+                                ImGui.SetNextItemWidth(300);
                                 ImGui.Text($"MTD: {_selectedMaterial.MTD ?? "No MTD"}");
                                 if (ImGui.Button("Edit MTD"))
                                 {
@@ -207,6 +208,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                             else
                             {
                                 ImGui.Text("New Path:");
+                                ImGui.SetNextItemWidth(300);
                                 ImGui.InputText("##PathEdit", ref _editingTexturePath, 512);
 
                                 ImGui.BeginGroup();
@@ -309,6 +311,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                                     // Позволяем ввод кастомного типа
                                     ImGui.Separator();
                                     ImGui.Text("Add Custom Type:");
+                                    ImGui.SetNextItemWidth(300);
                                     ImGui.InputText("##AddCustomType", ref _addingTextureType, 256);
 
                                     ImGui.EndCombo();
@@ -364,6 +367,10 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                     {
                         _flverTexFinder.ShowWindow(true);
                     }
+                    if (ImGui.MenuItem("Test flvers"))
+                    {
+                        TestSave();
+                    }
 
                     ImGui.EndMenu();
                 }
@@ -378,6 +385,39 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 }
                 ImGui.EndMenuBar();
             }
+        }
+
+        private void TestSave()
+        {
+            List<string> saveBug = [];
+            List<string> _fileList = _fileListViewer.GetFileList()
+            .Select(fileNode => fileNode.VirtualPath)
+            .ToList();
+
+            FileBinders binder = new();
+            var operation = new FileOperation
+            {
+                AdditionalFlverProcessing = (flver, realPath, path) =>
+                {
+                    
+                    List<FLVER2.Material> flver_materials = flver.Materials;
+                    try
+                    {
+                        var bytes = flver.Write();
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Find save errors -> rp: {realPath} p: {path}");
+                    }
+                }
+            };
+            binder.ProcessPaths(_fileList, operation);
+
+            foreach (var str in saveBug)
+            {
+                Console.WriteLine(str);
+            }
+            File.WriteAllLines("SaveBug.txt", saveBug);
         }
 
         private void MenuBarToolsRender()
@@ -442,12 +482,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                             FileTreeNodeBuilder builder = new();
                             FileNode fileNode = builder.BuildTree(file);
                             _fileListViewer.AddItemToList(fileNode);
-                            /* Автоматически выбираем первый файл
-                            if (_fileListViewer.GetSelectedIndex() == -1 && _fileListViewer.GetItemCount() > 0)
-                            {
-                                OnFlverFileSelected(fileNode);
-                            }
-                            */
                         }
                     }
                 });
@@ -547,10 +581,13 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
 
             if (fileNode.VirtualPath.Split("|").Last() != null) //wut??
             {
-                FileBinders binder = new();
-                binder.SetGetObjectOnly();
-                binder.Read(fileNode.VirtualPath);
-                
+                var binder = new FileBinders();
+                var operation = new FileOperation
+                {
+                    GetObject = true
+                };
+                binder.ProcessPaths(new[] { fileNode.VirtualPath }, operation);
+
                 _currentFlver = (FLVER2)binder.GetObject();
                 _flverMaterialList.UpdateList(_currentFlver.Materials);
                 _flverTextureList.ClearList();
@@ -598,9 +635,15 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             try
             {
                 string filePath = _selectedFile.VirtualPath;
-                FileBinders binders = new();
-                binders.SetCommon(false, true, false);
-                binders.SetFlver(true, true, _currentFlver);
+                var binder = new FileBinders();
+                var operation = new FileOperation
+                {
+                    Write = true,
+                    WriteFlver = true,
+                    ReplaceFlver = true,
+                    NewFlver = _currentFlver
+                };
+                binder.ProcessPaths(new[] { filePath }, operation);
                 Console.WriteLine($"Successfully saved changes to: {filePath}");
             }
             catch (Exception ex)

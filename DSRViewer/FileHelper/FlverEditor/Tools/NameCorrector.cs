@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 using DSRViewer.ImGuiHelper;
 using ImGuiNET;
 using SoulsFormats;
+using Vortice.Direct3D11;
 
 namespace DSRViewer.FileHelper.FlverEditor.Tools
 {
@@ -16,7 +18,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
         string texcorname = string.Empty;
         string texgtype = string.Empty;
         string texcorname_new = string.Empty;
-
+        FlverTools _flverTools = new();
         public FlverNameCorrector(string windowName, bool showWindow)
         {
             _windowName = windowName;
@@ -41,86 +43,55 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
             {
                 if (ImGui.BeginMenu("Tools"))
                 {
-                    if (ImGui.MenuItem("Get g_type"))
-                    {
-                        List<string> gTypeList = [];
-                        foreach (var file in flverfilelist)
-                        {
-                            try
-                            {
-                                FlverTools flverTools = new();
-                                FileBinders binders = new();
-                                binders.SetGetObjectOnly();
-                                binders.Read(file.VirtualPath);
-                                FLVER2 newFlver = (FLVER2)binders.GetObject();
-                                List<FLVER2.Material> flver_materials = newFlver.Materials;
-                                Console.WriteLine($"Read file:...{file.VirtualPath}");
-                                gTypeList = flverTools.GetGType(flver_materials, file.VirtualPath, gTypeList);
-                            }
-                            catch
-                            {
-                                Console.WriteLine($"Fail: {file}");
-                            }
-                        }
-                        gTypeList = gTypeList.Distinct().ToList();
-                        foreach (var str in gTypeList)
-                        {
-                            Console.WriteLine(str);
-                        }
-                    }
+                   
 
                     if (ImGui.MenuItem("Lowcase fix"))
                     {
-                        foreach (var file in flverfilelist)
+                        List<string> fileList = flverfilelist
+                        .Select(fileNode => fileNode.VirtualPath)
+                        .ToList();
+
+                        var binder = new FileBinders();
+                        var operation = new FileOperation
                         {
-                            try
+                            GetObject = true,
+                            Write = true,
+                            WriteFlver = true,
+                            AdditionalFlverProcessing = (flver, realPath, path) =>
                             {
-                                FlverTools flverTools = new();
-                                FileBinders binders = new();
-                                binders.SetGetObjectOnly();
-                                binders.Read(file.VirtualPath);
-                                FLVER2 newFlver = (FLVER2)binders.GetObject();
-                                List<FLVER2.Material> flver_materials = newFlver.Materials;
-                                Console.WriteLine($"Read file:...{file.VirtualPath}");
-                                if (flverTools.TexCorrectorFinderToLower(flver_materials))
-                                {
-                                    Console.WriteLine($"Found:...{file.VirtualPath}");
-                                    flverTools.TexCorrectorToLower(newFlver, flver_materials);
-                                    binders.SetFlver(true, true, newFlver);
-                                    binders.SetCommon(false, true);
-                                    binders.Read(file.VirtualPath);
-                                    Console.WriteLine($"Replace done:...{file.VirtualPath}");
-                                }
-                                binders = null;
+                                Console.WriteLine($"Lowcase fix delegate -> rp: {realPath} P: {path}");
+                                List<FLVER2.Material> flver_materials = flver.Materials;
+                                _flverTools.TexCorrectorFinderToLower(flver_materials);
+                                _flverTools.TexCorrectorToLower(flver, flver_materials);
                             }
-                            catch
-                            {
-                                Console.WriteLine($"Fail: {file}");
-                            }
-                        }
+                        };
+
+                        binder.ProcessPaths(fileList, operation);
                     }
 
+                    
                     if (ImGui.MenuItem("Find errors"))
                     {
                         List<string> bug_List = [];
-                        foreach (var file in flverfilelist)
+                        List<string> fileList = flverfilelist
+                        .Select(fileNode => fileNode.VirtualPath)
+                        .ToList();
+
+                        var binder = new FileBinders();
+                        var operation = new FileOperation
                         {
-                            try
+                            GetObject = true,
+                            Write = true,
+                            WriteFlver = true,
+                            AdditionalFlverProcessing = (flver, realPath, path) =>
                             {
-                                FlverTools flverTools = new();
-                                FileBinders binders = new();
-                                binders.SetGetObjectOnly();
-                                binders.Read(file.VirtualPath);
-                                FLVER2 newFlver = (FLVER2)binders.GetObject();
-                                List<FLVER2.Material> flver_materials = newFlver.Materials;
-                                Console.WriteLine($"Read file:...{file.VirtualPath}");
-                                bug_List = flverTools.TexCorrectorFinder(flver_materials, file.ShortVirtualPath, file.ShortName, bug_List);
+                                Console.WriteLine($"Find errors delegate -> rp: {realPath} p: {path}");
+                                List<FLVER2.Material> flver_materials = flver.Materials;
+                                bug_List = _flverTools.TexCorrectorFinder(flver_materials, realPath, path, bug_List);
                             }
-                            catch
-                            {
-                                Console.WriteLine($"Fail: {file}");
-                            }
-                        }
+                        };
+
+                        binder.ProcessPaths(fileList, operation);
 
                         foreach (var str in bug_List)
                         {
@@ -140,44 +111,36 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
             ImGui.BeginChild("Cld_TCW", new Vector2(0, 0), _childFlags);
             {
                 ImGui.SetNextItemWidth(300);
-                ImGui.InputText($"Set g_type", ref texgtype, 100);
+                ImGui.InputText($"Set g_type", ref texgtype, 256);
                 ImGui.SetNextItemWidth(300);
-                ImGui.InputText($"Set tex name", ref texcorname, 100);
+                ImGui.InputText($"Set tex name", ref texcorname, 256);
                 ImGui.SetNextItemWidth(300);
-                ImGui.InputText($"Set new tex name", ref texcorname_new, 100);
+                ImGui.InputText($"Set new tex name", ref texcorname_new, 256);
 
                 if (ImGui.Button("Replace"))
                 {
-                    foreach (var file in flverfilelist)
+                    List<string> fileList = flverfilelist
+                    .Select(fileNode => fileNode.VirtualPath)
+                    .ToList();
+
+                    var binder = new FileBinders();
+                    var operation = new FileOperation
                     {
-                        try
+                        Write = true,
+                        WriteFlver = true,
+                        AdditionalFlverProcessing = (flver, realPath, path) =>
                         {
-                            string path = file.VirtualPath.Split("|")[0];
-                            int[] v_path = file.VirtualPath.Split("|").Skip(1).Where(s => int.TryParse(s, out _)).Select(int.Parse).ToArray();
+                            Console.WriteLine($"Replace name delegate -> rp: {realPath} P: {path}");
+                            List<FLVER2.Material> flver_materials = flver.Materials;
 
-                            FlverTools flverTools = new();
-                            FileBinders binders = new();
-                            binders.SetGetObjectOnly();
-                            binders.Read(file.VirtualPath);
-                            FLVER2 newFlver = (FLVER2)binders.GetObject();
-                            List<FLVER2.Material> flver_materials = newFlver.Materials;
-                            if (flverTools.TexFinder(flver_materials, texcorname))
+                            if (_flverTools.TexFinder(flver_materials, texcorname))
                             {
-                                Console.WriteLine($"Found:...{file.VirtualPath}");
-                                flverTools.TexCorrectorReplacer(newFlver, flver_materials, texgtype, texcorname, texcorname_new);
-                                binders.SetFlver(true, true, newFlver);
-                                binders.SetCommon(false, true);
-                                binders.Read(file.VirtualPath);
-
-                                Console.WriteLine($"Replace done:...{file.VirtualPath}");
+                                _flverTools.TexCorrectorReplacer(flver, flver_materials, texgtype, texcorname, texcorname_new);
                             }
-                            binders = null;
                         }
-                        catch
-                        {
-                            Console.WriteLine($"Fail: {file}");
-                        }
-                    }
+                    };
+
+                    binder.ProcessPaths(fileList, operation);
                 }
             }
             ImGui.EndChild();

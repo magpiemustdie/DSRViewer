@@ -66,25 +66,27 @@ namespace DSRViewer.FileHelper.flverTools.Tools
                                         logWriter.WriteLine($"Processing: {file.VirtualPath}");
                                         logWriter.WriteLine($"File: {file.Name}");
 
-                                        FlverTools flverTools = new();
-                                        FileBinders binders = new();
-                                        binders.SetGetObjectOnly();
-                                        binders.Read(file.VirtualPath);
-                                        FLVER2 flver_main = (FLVER2)binders.GetObject();
+                                        var binder = new FileBinders();
+                                        var operation = new FileOperation
+                                        {
+                                            GetObject = true
+                                        };
+                                        binder.ProcessPaths(new[] { file.VirtualPath }, operation);
+                                        FLVER2 flver_main = (FLVER2)binder.GetObject();
                                         List<FLVER2.Material> flver_materials = flver_main.Materials;
 
-                                        if (flverTools.TexFinder(flver_materials, texturename))
+                                        if (_flverTools.TexFinder(flver_materials, texturename))
                                         {
                                             logWriter.WriteLine($"  Texture '{texturename}' found");
 
-                                            if (flverTools.MTDFinder(flver_materials, texturename, mtdnamefinder))
+                                            if (_flverTools.MTDFinder(flver_materials, texturename, mtdnamefinder))
                                             {
                                                 logWriter.WriteLine($"  MTD '{mtdnamefinder}' found");
                                                 Console.WriteLine($"Try to replace MTD (full): {file.VirtualPath}");
                                                 logWriter.WriteLine($"  Attempting MTD replacement...");
 
-                                                flver_materials = flverTools.MTDReplacerHeight(_mtdList, flver_materials, texturename, mtdnamefinder, mtdnewname, heightnewname);
-                                                flverTools.FlverWriter(flver_main, flver_materials, file.VirtualPath);
+                                                flver_materials = _flverTools.MTDReplacerHeight(_mtdList, flver_materials, texturename, mtdnamefinder, mtdnewname, heightnewname);
+                                                _flverTools.FlverWriter(flver_main, flver_materials, file.VirtualPath);
 
                                                 Console.WriteLine($"Write: {file.Name}");
                                                 logWriter.WriteLine($"  SUCCESS: MTD replaced with '{mtdnewname}', height map '{heightnewname}'");
@@ -154,25 +156,27 @@ namespace DSRViewer.FileHelper.flverTools.Tools
                                         logWriter.WriteLine($"Processing: {file.VirtualPath}");
                                         logWriter.WriteLine($"File: {file.Name}");
 
-                                        FlverTools flverTools = new();
-                                        FileBinders binders = new();
-                                        binders.SetGetObjectOnly();
-                                        binders.Read(file.VirtualPath);
-                                        FLVER2 flver_main = (FLVER2)binders.GetObject();
+                                        var binder = new FileBinders();
+                                        var operation = new FileOperation
+                                        {
+                                            GetObject = true
+                                        };
+                                        binder.ProcessPaths(new[] { file.VirtualPath }, operation);
+                                        FLVER2 flver_main = (FLVER2)binder.GetObject();
                                         List<FLVER2.Material> flver_materials = flver_main.Materials;
 
-                                        if (flverTools.TexFinder(flver_materials, texturename))
+                                        if (_flverTools.TexFinder(flver_materials, texturename))
                                         {
                                             logWriter.WriteLine($"  Texture '{texturename}' found");
 
-                                            if (flverTools.MTDFinder(flver_materials, texturename, mtdnamefinder))
+                                            if (_flverTools.MTDFinder(flver_materials, texturename, mtdnamefinder))
                                             {
                                                 logWriter.WriteLine($"  MTD '{mtdnamefinder}' found");
                                                 Console.WriteLine($"Try to replace MTD: {file.VirtualPath}");
                                                 logWriter.WriteLine($"  Attempting MTD name replacement...");
 
-                                                flverTools.MTDReplacer(flver_materials, texturename, mtdnamefinder, mtdnewname);
-                                                flverTools.FlverWriter(flver_main, flver_materials, file.VirtualPath);
+                                                _flverTools.MTDReplacer(flver_materials, texturename, mtdnamefinder, mtdnewname);
+                                                _flverTools.FlverWriter(flver_main, flver_materials, file.VirtualPath);
 
                                                 Console.WriteLine($"Write: {file.Name}");
                                                 logWriter.WriteLine($"  SUCCESS: MTD name replaced with '{mtdnewname}'");

@@ -17,16 +17,12 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             Console.WriteLine("Done");
             return flverList;
         }
-
         private List<FileNode> ReadAllFlvers(FileNode fileNode)
         {
             List<FileNode> fileNodeList = [];
-
             RecursiveFlverFinder(fileNode, fileNodeList);
-
             return fileNodeList;
         }
-
         private void RecursiveFlverFinder(FileNode fileNode, List<FileNode> fileNodeList)
         {
             foreach (var child in fileNode.Children)
@@ -35,8 +31,34 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                 {
                     fileNodeList.Add(child);
                 }
-
                 RecursiveFlverFinder(child, fileNodeList);
+            }
+        }
+        public List<FileNode> NodeTexFinder(FileNode fileNode)
+        {
+            Console.WriteLine("Start texture finder...");
+            var texList = ReadAllTex(fileNode);
+            Console.WriteLine("Done");
+            return texList;
+        }
+
+
+        private List<FileNode> ReadAllTex(FileNode fileNode)
+        {
+            List<FileNode> fileNodeList = [];
+            RecursiveTexFinder(fileNode, fileNodeList);
+            return fileNodeList;
+        }
+
+        private void RecursiveTexFinder(FileNode fileNode, List<FileNode> fileNodeList)
+        {
+            foreach (var child in fileNode.Children)
+            {
+                if (child.IsNestedDDS)
+                {
+                    fileNodeList.Add(child);
+                }
+                RecursiveTexFinder(child, fileNodeList);
             }
         }
 

@@ -45,30 +45,39 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                         return;
                     }
 
-                    ExtractFile(selected.VirtualPath, _config.ExtractFolder);
+                    ExtractFile(selected, _config.ExtractFolder);
                 }
             }
         }
 
-        public static void ExtractFile(string sourcePath, string outputDir)
+        public static void ExtractFile(FileNode selected, string outputDir)
         {
+            
             var binder = new FileBinders();
             var operation = new FileOperation { GetObject = true };
 
-            binder.ProcessPaths(new[] { sourcePath }, operation);
+            binder.ProcessPaths(new[] { selected.VirtualPath }, operation);
             var obj = binder.GetObject();
 
             if (obj is BinderFile file)
             {
-                File.WriteAllBytes(Path.Combine(outputDir, "extracted.dat"), file.Bytes);
+                File.WriteAllBytes(Path.Combine(outputDir, selected.Name.Split("\\").Last()), file.Bytes);
             }
             else if (obj is TPF.Texture texture)
             {
-                File.WriteAllBytes(Path.Combine(outputDir, "texture.dds"), texture.Bytes);
+                File.WriteAllBytes(Path.Combine(outputDir, selected.Name.Split("\\").Last() + ".dds"), texture.Bytes);
             }
             else if (obj is FLVER2 flver)
             {
-                flver.Write(Path.Combine(outputDir, "model.flver"));
+                flver.Write(Path.Combine(outputDir, selected.Name.Split("\\").Last()));
+            }
+            else if (obj is TPF tpf)
+            {
+                tpf.Write(Path.Combine(outputDir, selected.Name.Split("\\").Last()));
+            }
+            else if (obj is BND bnd)
+            {
+                bnd.Write(Path.Combine(outputDir, selected.Name.Split("\\").Last()));
             }
         }
 
