@@ -398,7 +398,11 @@ namespace DSRViewer.FileHelper
 
                 // in any case
                 file.Bytes = DCX.Compress(tempFile.Bytes, dcxType);
-                if (operation.GetObject) _mainObject = file;
+
+                if (indicesList.Any(indices => indices.Length == 0))
+                {
+                    if (operation.GetObject) _mainObject = file;
+                }
             }
             catch (Exception ex)
             {
