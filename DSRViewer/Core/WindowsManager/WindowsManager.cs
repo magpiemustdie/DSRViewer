@@ -17,19 +17,22 @@ using Veldrid.Sdl2;
 using DSRViewer.FileHelper.FlverEditor.Render;
 using DSRViewer.FileHelper.FileExplorer.Render;
 using DSRViewer.FileHelper.MTDEditor.Render;
+using DSRViewer.FileHelper;
 
-namespace DSRViewer.Core.MainRender
+namespace DSRViewer.Core.WindowsManager
 {
-    public class ViewMainWindow
+    public class WindowsManager
     {
         List<ExplorerWindow> _explorerWindows = new();
         List<FMW> _flverEditorWindows = new();
         List<MTDWindow> _mtdEditorWindows = new();
+        List<TransferFilesWindow> _transferFilesWindows = new();
+
 
         GraphicsDevice _gd;
         ImGuiController _controller;
 
-        public ViewMainWindow(GraphicsDevice gd, ImGuiController controller)
+        public WindowsManager(GraphicsDevice gd, ImGuiController controller)
         {
             _gd = gd;
             _controller = controller;
@@ -40,6 +43,7 @@ namespace DSRViewer.Core.MainRender
             ViewExplorerWindows();
             ViewFlverEditorWindows();
             ViewMTDEditorWindows();
+            ViewTransferWindows();
         }
 
         private void ViewMainMenubar()
@@ -70,9 +74,19 @@ namespace DSRViewer.Core.MainRender
                 {
                     if (ImGui.MenuItem("Create..."))
                     {
-                        MTDWindow _mtdEditorWindow = new($"MTDE_{_mtdEditorWindows.Count + 1}", true);
-                        _mtdEditorWindow.ShowWindow(true);
-                        _mtdEditorWindows.Add(_mtdEditorWindow);
+                        MTDWindow mtdEditorWindow = new($"MTDE_{_mtdEditorWindows.Count + 1}", true);
+                        _mtdEditorWindows.Add(mtdEditorWindow);
+                    }
+                    ImGui.EndMenu();
+                }
+
+                if (ImGui.BeginMenu("New Transfer window..."))
+                {
+                    if (ImGui.MenuItem("Create..."))
+                    {
+                        TransferFilesWindow transferWindow = new($"Transfer files_{_transferFilesWindows.Count + 1}", true);
+                        transferWindow.ExplorerWindows = _explorerWindows;
+                        _transferFilesWindows.Add(transferWindow);
                     }
                     ImGui.EndMenu();
                 }
@@ -104,6 +118,15 @@ namespace DSRViewer.Core.MainRender
                 window.Render();
             }
         }
+        private void ViewTransferWindows()
+        {
+            foreach (var window in _transferFilesWindows)
+            {
+                window.Render();
+            }
+        }
+
+        
     }
 }
 

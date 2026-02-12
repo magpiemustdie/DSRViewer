@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using SoulsFormats;
 using DSRViewer.FileHelper.FileExplorer.DDSHelper;
+using System.Diagnostics;
 
 namespace DSRViewer.FileHelper
 {
@@ -11,7 +12,7 @@ namespace DSRViewer.FileHelper
     {
         private string _currentRealPath = "";
         private object? _mainObject;
-        private List<string> _errorLogs = new List<string>();
+        private List<string> _errorLogs = [];
 
         public void ProcessPaths(IEnumerable<string> virtualPaths, FileOperation operation)
         {
@@ -67,10 +68,60 @@ namespace DSRViewer.FileHelper
                 ProcessBnd(filePath, indicesList, operation);
             else if (IsTpf(filePath))
                 ProcessTpf(filePath, indicesList, operation);
-            else if (IsFlver(filePath))
-                ProcessFlver(filePath, indicesList, operation);
             else if (IsBxf(filePath))
                 ProcessBxf(filePath, indicesList, operation);
+            else if (IsFlver(filePath))
+                ProcessFlver(filePath, operation);
+        }
+
+        private void ProcessInnerFile(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        {
+            Console.WriteLine($"Processing inner file {file.Name}");
+            
+            if (indicesList.Count == 0 || indicesList.All(indices => indices.Length == 0))
+            {
+                ProcessFileData(file, operation);
+                return;
+            }
+
+            if (IsBndData(file.Bytes))
+                ProcessBndData(file, indicesList, operation);
+            else if (IsTpfData(file.Bytes))
+                ProcessTpfData(file, indicesList, operation);
+            else if (IsBxfData(file.Bytes))
+                ProcessBxfData(file, indicesList, operation);
+            else if (IsDcxData(file.Bytes))
+                ProcessDcxData(file, indicesList, operation);
+        }
+
+        private void ProcessFileData(BinderFile file, FileOperation operation)
+        {
+            Console.WriteLine("Processing file data");
+
+            if (IsFlvData(file.Bytes))
+            {
+                Console.WriteLine("Processing FLVER data");
+                ProcessFlverData(file, operation);
+            }
+            else if (IsTpfData(file.Bytes))
+            {
+                Console.WriteLine("Processing TPF data");
+                ProcessTpfData(file, [[]], operation);
+            }
+            else if (IsBxfData(file.Bytes))
+            {
+                Console.WriteLine("Processing BXF data");
+                ProcessBxfData(file, [[]], operation);
+            }
+            else if (IsDcxData(file.Bytes))
+            {
+                Console.WriteLine("Processing DCX data");
+                ProcessDcxData(file, [[]], operation);
+            }
+            else if (operation.GetObject)
+            {
+                _mainObject = file;
+            }
         }
 
         private void ProcessBnd(string path, List<int[]> indicesList, FileOperation operation)
@@ -99,152 +150,8 @@ namespace DSRViewer.FileHelper
                 ProcessObject(bnd, operation);
             }
 
-            if (operation.Write)
+            if (operation.WriteObject)
                 bnd.Write(path);
-        }
-
-        private void ProcessInnerFile(BinderFile file, List<int[]> indicesList, FileOperation operation)
-        {
-            Console.WriteLine($"Processing inner file {file.Name}");
-            if (indicesList.Count == 0 || indicesList.All(indices => indices.Length == 0))
-            {
-                ProcessFileData(file, operation);
-                return;
-            }
-
-            if (IsBndData(file.Bytes))
-                ProcessBndData(file, indicesList, operation);
-            else if (IsTpfData(file.Bytes))
-                ProcessTpfData(file, indicesList, operation);
-            else if (IsBxfData(file.Bytes))
-                ProcessBxfData(file, indicesList, operation);
-            else if (IsDcxData(file.Bytes))
-                ProcessDcxData(file, indicesList, operation);
-            else
-            {
-                foreach (var indices in indicesList)
-                {
-                    ProcessSingleInnerFile(file, indices, operation);
-                }
-            }
-        }
-
-        private void ProcessSingleInnerFile(BinderFile file, int[] indices, FileOperation operation)
-        {
-            Console.WriteLine($"Processing single inner file {file.Name}");
-            if (indices.Length == 0)
-            {
-                ProcessFileData(file, operation);
-                return;
-            }
-
-            if (IsBndData(file.Bytes))
-                ProcessBndData(file, new List<int[]> { indices }, operation);
-            else if (IsTpfData(file.Bytes))
-                ProcessTpfData(file, new List<int[]> { indices }, operation);
-            else if (IsBxfData(file.Bytes))
-                ProcessBxfData(file, new List<int[]> { indices }, operation);
-            else if (IsDcxData(file.Bytes))
-                ProcessDcxData(file, new List<int[]> { indices }, operation);
-        }
-
-        private void ProcessFileData(BinderFile file, FileOperation operation)
-        {
-            Console.WriteLine("Processing file data");
-
-            if (IsFlvData(file.Bytes))
-            {
-                Console.WriteLine("Processing FLVER data");
-                var flver = FLVER2.Read(file.Bytes);
-                if (operation.GetObject) _mainObject = flver;
-                if (operation.ReplaceFlver) flver = operation.NewFlver;
-                operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, file.Name);
-                if (operation.WriteFlver || operation.ReplaceFlver)
-                    file.Bytes = WriteFlverSafe(flver, file.Bytes, file.Name);
-            }
-            else if (IsTpfData(file.Bytes))
-            {
-                Console.WriteLine("Processing TPF data");
-                var tpf = TPF.Read(file.Bytes);
-                ProcessTpfObject(tpf, operation);
-                if (operation.Write) file.Bytes = tpf.Write();
-            }
-            else if (IsDcxData(file.Bytes))
-            {
-                Console.WriteLine("Processing DCX data");
-
-                try
-                {
-                    var decompressed = DCX.Decompress(file.Bytes, out var dcxType);
-
-                    if (IsTpfData(decompressed))
-                    {
-                        var tpf = TPF.Read(decompressed);
-                        ProcessTpfObject(tpf, operation);
-
-                        if (operation.Write)
-                        {
-                            var tpfBytes = tpf.Write();
-                            file.Bytes = DCX.Compress(tpfBytes, dcxType);
-                        }
-                        else if (operation.GetObject)
-                        {
-                            _mainObject = tpf;
-                        }
-                    }
-                    else if (IsFlvData(decompressed))
-                    {
-                        var flver = FLVER2.Read(decompressed);
-                        if (operation.GetObject) _mainObject = flver;
-                        if (operation.ReplaceFlver) flver = operation.NewFlver;
-                        if (operation.UseFlverDelegate)
-                            operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, file.Name);
-                        if (operation.WriteFlver || operation.ReplaceFlver)
-                        {
-                            var flverBytes = WriteFlverSafe(flver, decompressed, file.Name);
-                            file.Bytes = DCX.Compress(flverBytes, dcxType);
-                        }
-                    }
-                    else if (IsBndData(decompressed))
-                    {
-                        var bnd = BND3.Read(decompressed);
-                        if (operation.GetObject) _mainObject = bnd;
-
-                        if (operation.Write)
-                        {
-                            var bndBytes = bnd.Write();
-                            file.Bytes = DCX.Compress(bndBytes, dcxType);
-                        }
-                    }
-                    else
-                    {
-                        if (operation.GetObject)
-                        {
-                            _mainObject = decompressed;
-                        }
-
-                        if (operation.Write)
-                        {
-                            file.Bytes = DCX.Compress(decompressed, dcxType);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    var errorMsg = $"Failed to process DCX data for {file.Name}: {ex.Message}";
-                    Console.WriteLine(errorMsg);
-                    _errorLogs.Add(errorMsg);
-
-                    if (operation.GetObject)
-                    {
-                        _mainObject = file;
-                    }
-                }
-            }
-            else if (operation.GetObject)
-            {
-                _mainObject = file;
-            }
         }
 
         private void ProcessBndData(BinderFile file, List<int[]> indicesList, FileOperation operation)
@@ -269,8 +176,116 @@ namespace DSRViewer.FileHelper
                 }
             }
 
-            if (operation.Write)
+            if (operation.WriteObject)
                 file.Bytes = bnd.Write();
+        }
+
+        private void ProcessBxf(string bhdPath, List<int[]> indicesList, FileOperation operation)
+        {
+            Console.WriteLine($"Processing BXF archive {bhdPath}");
+            var bdtPath = FindBdtPath(bhdPath);
+            if (!File.Exists(bdtPath)) return;
+
+            var bxf = BXF3.Read(bhdPath, bdtPath);
+
+            var fileGroups = indicesList
+                .Where(indices => indices.Length > 0)
+                .GroupBy(indices => indices[0])
+                .ToDictionary(g => g.Key, g => g.Select(indices => indices.Skip(1).ToArray()).ToList());
+
+            foreach (var group in fileGroups)
+            {
+                var fileIndex = group.Key;
+                var innerIndices = group.Value;
+
+                if (fileIndex >= 0 && fileIndex < bxf.Files.Count)
+                {
+                    var file = bxf.Files[fileIndex];
+                    ProcessInnerFile(file, innerIndices, operation);
+                }
+            }
+
+            if (indicesList.Any(indices => indices.Length == 0))
+            {
+                if (operation.AddTpfDcx) AddTpfDcxToBxf(bxf, operation);
+            }
+
+            if (operation.RemoveTpfDcx && indicesList.Count == 1)
+            {
+                var indices = indicesList[0];
+                if (indices.Length == 1)
+                {
+                    var tpfDcxIndex = indices[0];
+                    if (tpfDcxIndex >= 0 && tpfDcxIndex < bxf.Files.Count)
+                    {
+                        bxf.Files.RemoveAt(tpfDcxIndex);
+                        Console.WriteLine($"Removed tpf.dcx at index {tpfDcxIndex}");
+                    }
+                }
+                else if (indices.Length == 0)
+                {
+                    Console.WriteLine("Cannot remove tpf.dcx without specifying index");
+                }
+            }
+
+            if (operation.WriteObject)
+                bxf.Write(bhdPath, bdtPath);
+        }
+
+        private void ProcessBxfData(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        {
+            Console.WriteLine($"Processing BXF data {file.Name}");
+            var bdtPath = FindBdtPathForFile(file);
+            if (!File.Exists(bdtPath)) return;
+
+            var bxf = BXF3.Read(file.Bytes, bdtPath);
+
+            var fileGroups = indicesList
+                .Where(indices => indices.Length > 0)
+                .GroupBy(indices => indices[0])
+                .ToDictionary(g => g.Key, g => g.Select(indices => indices.Skip(1).ToArray()).ToList());
+
+            foreach (var group in fileGroups)
+            {
+                var innerIndex = group.Key;
+                var innerIndices = group.Value;
+
+                if (innerIndex >= 0 && innerIndex < bxf.Files.Count)
+                {
+                    var innerFile = bxf.Files[innerIndex];
+                    ProcessInnerFile(innerFile, innerIndices, operation);
+                }
+            }
+
+            if (indicesList.Any(indices => indices.Length == 0))
+            {
+                if (operation.AddTpfDcx) AddTpfDcxToBxf(bxf, operation);
+            }
+
+            if (operation.RemoveTpfDcx && indicesList.Count == 1)
+            {
+                var indices = indicesList[0];
+                if (indices.Length == 1)
+                {
+                    var tpfDcxIndex = indices[0];
+                    if (tpfDcxIndex >= 0 && tpfDcxIndex < bxf.Files.Count)
+                    {
+                        bxf.Files.RemoveAt(tpfDcxIndex);
+                        Console.WriteLine($"Removed tpf.dcx at index {tpfDcxIndex}");
+                    }
+                }
+                else if (indices.Length == 0)
+                {
+                    Console.WriteLine("Cannot remove tpf.dcx without specifying index");
+                }
+            }
+
+            if (operation.WriteObject)
+            {
+                bxf.Write(out var bhdBytes, out var bdtBytes);
+                file.Bytes = bhdBytes;
+                File.WriteAllBytes(bdtPath, bdtBytes);
+            }
         }
 
         private void ProcessTpf(string path, List<int[]> indicesList, FileOperation operation)
@@ -280,7 +295,7 @@ namespace DSRViewer.FileHelper
 
             ProcessTpfIndices(tpf, indicesList, operation);
 
-            if (operation.Write)
+            if (operation.WriteObject)
                 tpf.Write(path);
         }
 
@@ -291,7 +306,7 @@ namespace DSRViewer.FileHelper
 
             ProcessTpfIndices(tpf, indicesList, operation);
 
-            if (operation.Write)
+            if (operation.WriteObject)
                 file.Bytes = tpf.Write();
         }
 
@@ -301,7 +316,9 @@ namespace DSRViewer.FileHelper
             {
                 if (indices.Length == 0)
                 {
-                    ProcessTpfObject(tpf, operation);
+                    if (operation.GetObject) _mainObject = tpf;
+                    if (operation.ReplaceObject) tpf = TPF.Read(operation.NewBytes);
+                    if (operation.AddTexture) tpf.Textures.Add(CreateNewTexture(operation));
                     continue;
                 }
 
@@ -332,14 +349,6 @@ namespace DSRViewer.FileHelper
             }
         }
 
-        private void ProcessTpfObject(TPF tpf, FileOperation operation)
-        {
-            Console.WriteLine($"Processing TPF object");
-            if (operation.GetObject) _mainObject = tpf;
-            if (operation.Replace) tpf = TPF.Read(operation.NewBytes);
-            if (operation.AddTexture) tpf.Textures.Add(CreateNewTexture(operation));
-        }
-
         private void ProcessTexture(TPF.Texture texture, FileOperation operation)
         {
             Console.WriteLine($"Processing texture {texture.Name}");
@@ -349,105 +358,60 @@ namespace DSRViewer.FileHelper
             if (operation.ChangeTextureFormat) texture.Format = operation.NewTextureFormat;
         }
 
-        private void ProcessFlver(string path, List<int[]> indicesList, FileOperation operation)
+        private void ProcessFlver(string path, FileOperation operation)
         {
             Console.WriteLine($"Processing FLVER file {path}");
             var flver = FLVER2.Read(path);
 
-            if (indicesList.Any(indices => indices.Length == 0))
-            {
-                if (operation.GetObject) _mainObject = flver;
-                if (operation.ReplaceFlver) flver = operation.NewFlver;
-                if (operation.UseFlverDelegate)
-                    operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, path);
-            }
+            if (operation.GetObject) _mainObject = flver;
+            if (operation.ReplaceFlver) flver = operation.NewFlver;
+            if (operation.UseFlverDelegate) operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, path);
 
-            if (operation.WriteFlver || operation.ReplaceFlver)
+            if (operation.WriteFlver)
             {
                 byte[] original = File.ReadAllBytes(path);
                 WriteFlverSafe(flver, path, original);
             }
         }
 
-        private void ProcessBxf(string bhdPath, List<int[]> indicesList, FileOperation operation)
+        private void ProcessFlverData(BinderFile file, FileOperation operation)
         {
-            Console.WriteLine($"Processing BXF archive {bhdPath}");
-            var bdtPath = FindBdtPath(bhdPath);
-            if (!File.Exists(bdtPath)) return;
-
-            var bxf = BXF3.Read(bhdPath, bdtPath);
-
-            var fileGroups = indicesList
-                .Where(indices => indices.Length > 0)
-                .GroupBy(indices => indices[0])
-                .ToDictionary(g => g.Key, g => g.Select(indices => indices.Skip(1).ToArray()).ToList());
-
-            foreach (var group in fileGroups)
-            {
-                var fileIndex = group.Key;
-                var innerIndices = group.Value;
-
-                if (fileIndex >= 0 && fileIndex < bxf.Files.Count)
-                {
-                    var file = bxf.Files[fileIndex];
-                    ProcessInnerFile(file, innerIndices, operation);
-                }
-            }
-
-            // Обработка добавления нового файла TPF.DCX
-            if (indicesList.Any(indices => indices.Length == 0) && operation.AddTpfDcx)
-            {
-                AddTpfDcxToBxf(bxf, operation);
-            }
-            else if (indicesList.Any(indices => indices.Length == 0))
-            {
-                ProcessObject(bxf, operation);
-            }
-
-            if (operation.Write || operation.AddTpfDcx)
-                bxf.Write(bhdPath, bdtPath);
+            Console.WriteLine($"Processing FLVER file {file.Name}");
+            var flver = FLVER2.Read(file.Bytes);
+            if (operation.GetObject) _mainObject = flver;
+            if (operation.ReplaceFlver) flver = operation.NewFlver;
+            if (operation.UseFlverDelegate) operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, file.Name);
+            if (operation.RenameObject) file.Name = operation.NewObjectName;
+            if (operation.WriteFlver)
+                file.Bytes = WriteFlverSafe(flver, file.Bytes, file.Name);
         }
 
-        private void ProcessBxfData(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        private void ProcessDcxData(BinderFile file, List<int[]> indicesList, FileOperation operation)
         {
-            Console.WriteLine($"Processing BXF data {file.Name}");
-            var bdtPath = FindBdtPathForFile(file);
-            if (!File.Exists(bdtPath)) return;
-
-            var bxf = BXF3.Read(file.Bytes, bdtPath);
-
-            var fileGroups = indicesList
-                .Where(indices => indices.Length > 0)
-                .GroupBy(indices => indices[0])
-                .ToDictionary(g => g.Key, g => g.Select(indices => indices.Skip(1).ToArray()).ToList());
-
-            foreach (var group in fileGroups)
+            Console.WriteLine($"Processing DCX data {file.Name}");
+            try
             {
-                var innerIndex = group.Key;
-                var innerIndices = group.Value;
+                var decompressed = DCX.Decompress(file.Bytes, out var dcxType);
+                var tempFile = new BinderFile { Bytes = decompressed, Name = file.Name };
 
-                if (innerIndex >= 0 && innerIndex < bxf.Files.Count)
-                {
-                    var innerFile = bxf.Files[innerIndex];
-                    ProcessInnerFile(innerFile, innerIndices, operation);
-                }
+                ProcessInnerFile(tempFile, indicesList, operation);
+
+                // in any case
+                file.Bytes = DCX.Compress(tempFile.Bytes, dcxType);
+                if (operation.GetObject) _mainObject = file;
             }
-
-            // Обработка добавления нового файла TPF.DCX
-            if (indicesList.Any(indices => indices.Length == 0) && operation.AddTpfDcx)
+            catch (Exception ex)
             {
-                AddTpfDcxToBxf(bxf, operation);
-            }
-
-            if (operation.Write || operation.AddTpfDcx)
-            {
-                bxf.Write(out var bhdBytes, out var bdtBytes);
-                file.Bytes = bhdBytes;
-                File.WriteAllBytes(bdtPath, bdtBytes);
+                var errorMsg = $"Failed to decompress DCX for {file.Name}: {ex.Message}";
+                Console.WriteLine(errorMsg);
+                _errorLogs.Add(errorMsg);
             }
         }
+        private void ProcessObject(object obj, FileOperation operation)
+        {
+            if (operation.GetObject) _mainObject = obj;
+        }
 
-        // Новый метод для добавления TPF.DCX в BXF
         private void AddTpfDcxToBxf(BXF3 bxf, FileOperation operation)
         {
             Console.WriteLine($"Adding TPF.DCX archive to BXF");
@@ -521,32 +485,6 @@ namespace DSRViewer.FileHelper
             while (bxf.Files.Any(f => f.Name.Equals(fileName, StringComparison.OrdinalIgnoreCase)));
 
             return fileName;
-        }
-
-        private void ProcessDcxData(BinderFile file, List<int[]> indicesList, FileOperation operation)
-        {
-            Console.WriteLine($"Processing DCX data {file.Name}");
-            try
-            {
-                var decompressed = DCX.Decompress(file.Bytes, out var dcxType);
-                var tempFile = new BinderFile { Bytes = decompressed, Name = file.Name };
-
-                ProcessInnerFile(tempFile, indicesList, operation);
-
-                if (operation.Write)
-                    file.Bytes = DCX.Compress(tempFile.Bytes, dcxType);
-            }
-            catch (Exception ex)
-            {
-                var errorMsg = $"Failed to decompress DCX for {file.Name}: {ex.Message}";
-                Console.WriteLine(errorMsg);
-                _errorLogs.Add(errorMsg);
-            }
-        }
-
-        private void ProcessObject(object obj, FileOperation operation)
-        {
-            if (operation.GetObject) _mainObject = obj;
         }
 
         private static TPF.Texture CreateNewTexture(FileOperation operation)
@@ -636,8 +574,8 @@ namespace DSRViewer.FileHelper
         }
 
         private static bool IsBndData(byte[] data) => data.Length >= 4 && data[0] == 'B' && data[1] == 'N' && data[2] == 'D' && data[3] == '3';
-        private static bool IsTpfData(byte[] data) => data.Length >= 3 && data[0] == 'T' && data[1] == 'P' && data[2] == 'F';
         private static bool IsBxfData(byte[] data) => data.Length >= 4 && data[0] == 'B' && data[1] == 'H' && data[2] == 'F' && data[3] == '3';
+        private static bool IsTpfData(byte[] data) => data.Length >= 3 && data[0] == 'T' && data[1] == 'P' && data[2] == 'F';
         private static bool IsFlvData(byte[] data) => data.Length >= 5 && data[0] == 'F' && data[1] == 'L' && data[2] == 'V' && data[3] == 'E' && data[4] == 'R';
         private static bool IsDcxData(byte[] data) => data.Length >= 3 && data[0] == 'D' && data[1] == 'C' && data[2] == 'X';
 
@@ -652,28 +590,40 @@ namespace DSRViewer.FileHelper
 
     public class FileOperation
     {
+        public byte[] NewBytes { get; set; } = [];
+
+        //any object
         public bool GetObject { get; set; }
-        public bool Write { get; set; }
-        public bool Replace { get; set; }
-        public byte[] NewBytes { get; set; } = Array.Empty<byte>();
+        public bool WriteObject { get; set; }
+        public bool ReplaceObject { get; set; }
+        public bool RenameObject { get; set; }
+        public bool RemoveObject { get; set; }
+        public string NewObjectName { get; set; }
+
+        //flver
 
         public bool WriteFlver { get; set; }
         public bool ReplaceFlver { get; set; }
         public FLVER2 NewFlver { get; set; } = new();
 
+        //tpf
         public bool AddTexture { get; set; }
         public bool RemoveTexture { get; set; }
         public bool ReplaceTexture { get; set; }
+
+        //tpf.texture
         public bool RenameTexture { get; set; }
         public bool ChangeTextureFormat { get; set; }
-        public byte[] NewTextureBytes { get; set; } = Array.Empty<byte>();
+        public byte[] NewTextureBytes { get; set; } = [];
         public byte NewTextureFormat { get; set; }
         public string NewTextureName { get; set; } = "";
 
-        // Флаг для добавления TPF.DCX архива
+        // bxf.tpf.dcx
         public bool AddTpfDcx { get; set; }
+        public bool RemoveTpfDcx { get; set; }
         public string NewTpfDcxArchiveName = "";
 
+        //Delegates
         public bool UseFlverDelegate { get; set; }
         public bool UseTexDelegate { get; set; }
         public Action<FLVER2, string, string> AdditionalFlverProcessing { get; set; }

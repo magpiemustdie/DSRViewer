@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ImGuiNET;
 using DSRViewer.FileHelper;
 using SoulsFormats;
+using System.Numerics;
 
 namespace DSRViewer.ImGuiHelper
 {
@@ -31,6 +32,12 @@ namespace DSRViewer.ImGuiHelper
             ClickHandlerString = DefaultClickFunctionString;
             ClickHandlerMaterial = DefaultClickFunctionMaterial;
             ClickHandlerMatTexture = DefaultClickFunctionMatTexture;
+        }
+
+        public ImGuiClickableList(string childName, Vector2 size) : this()
+        {
+            _childName = childName;
+            _childSize = size;
         }
 
         protected virtual void DefaultClickFunctionNode(FileNode node, int index)

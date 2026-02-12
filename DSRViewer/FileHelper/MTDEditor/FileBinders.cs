@@ -147,8 +147,6 @@ namespace DSRViewer.FileHelper
             if (_ddsRename && i.Length == 1) tex.Name = _ddsName;
             if (_ddsReplaceFlag && i.Length == 1) tex.Format = _ddsFlag;
             if (_ddsRemove && i.Length == 1) t.Textures.RemoveAt(i[0]);
-
-            //if (i.Length > 1) ProcessTex(t, i.Skip(1).ToArray());
         }
 
         private void ProcessBnd(BinderFile f, int[] i, int idx)

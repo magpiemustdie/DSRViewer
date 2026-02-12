@@ -55,8 +55,9 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                         var operation = new FileOperation
                         {
                             GetObject = true,
-                            Write = true,
+                            WriteObject = true,
                             WriteFlver = true,
+                            UseFlverDelegate = true,
                             AdditionalFlverProcessing = (flver, realPath, path) =>
                             {
                                 Console.WriteLine($"Lowcase fix delegate -> rp: {realPath} P: {path}");
@@ -81,8 +82,9 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                         var operation = new FileOperation
                         {
                             GetObject = true,
-                            Write = true,
+                            WriteObject = true,
                             WriteFlver = true,
+                            UseFlverDelegate = true,
                             AdditionalFlverProcessing = (flver, realPath, path) =>
                             {
                                 Console.WriteLine($"Find errors delegate -> rp: {realPath} p: {path}");
@@ -126,8 +128,9 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                     var binder = new FileBinders();
                     var operation = new FileOperation
                     {
-                        Write = true,
+                        WriteObject = true,
                         WriteFlver = true,
+                        UseFlverDelegate = true,
                         AdditionalFlverProcessing = (flver, realPath, path) =>
                         {
                             Console.WriteLine($"Replace name delegate -> rp: {realPath} P: {path}");

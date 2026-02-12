@@ -24,7 +24,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         private FileTreeNodeBuilder _builder = new();
         private FileTreeViewer _treeViewer = new();
         private FileNode _root = new();
-        private FileNode _selected = new();
+        
         private DDSTextureViewChild _ddsTexViewChild;
         private FMW _flverEditor;
         private Extractor _extractor;
@@ -32,8 +32,15 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         private Finder _finder;
         private Config _config;
         private List<MTDShortDetails> _mtdList;
+        private string _rootFilePath = string.Empty;
+        private FileNode _selected = new();
 
-        public string RootFilePath { get; private set; } = string.Empty;
+        public string RootFilePath = string.Empty;
+        public FileNode Root => _root;
+        public FileNode Selected => _selected;
+
+        public Injector Injector => _injector;
+
 
         public TreeChild(string childName, string rootFilePath, bool showChild, Config config, List<MTDShortDetails> mtdList, GraphicsDevice gd, ImGuiController cl)
         {
@@ -61,7 +68,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
 
         public override void Render()
         {
-            if (string.IsNullOrEmpty(RootFilePath)) return;
+            if (string.IsNullOrEmpty(_rootFilePath)) return;
 
             if (ImGui.BeginTabItem(_childName, ref _showChild))
             {
@@ -126,8 +133,8 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
 
         public void SetRoot(string rootFilePath)
         {
-            RootFilePath = rootFilePath;
-            _root = _builder.BuildTree(rootFilePath);
+            _rootFilePath = rootFilePath;
+            _root = _builder.BuildTree(_rootFilePath);
         }
 
         private void OnInjectionComplete(string archivePath)
@@ -139,9 +146,9 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
                 var pathParts = archivePath.Split("|");
                 var cleanPath = pathParts[0];
 
-                if (RootFilePath.Equals(cleanPath, StringComparison.OrdinalIgnoreCase))
+                if (_rootFilePath.Equals(cleanPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    _root = _builder.BuildTree(RootFilePath);
+                    _root = _builder.BuildTree(_rootFilePath);
                 }
                 else
                 {

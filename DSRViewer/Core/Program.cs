@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Numerics;
 using Veldrid.MetalBindings;
 using DSRViewer.ImGuiHelper;
-using DSRViewer.Core.MainRender;
+using DSRViewer.Core.WindowsManager;
 
 namespace DSRViewer
 {
@@ -39,7 +39,7 @@ namespace DSRViewer
             var stopwatch = Stopwatch.StartNew();
             float deltaTime = 0f;
             // Main application loop
-            ViewMainWindow mainWindow = new(_gd, _controller);
+            WindowsManager mainWindow = new(_gd, _controller);
 
             while (_window.Exists)
             {

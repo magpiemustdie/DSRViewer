@@ -53,7 +53,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                 var binder = new FileBinders();
                 var operation = new FileOperation
                 {
-                    Write = true,
+                    WriteObject = true,
                     ReplaceFlver = true,
                     WriteFlver = true,
                     NewFlver = flver

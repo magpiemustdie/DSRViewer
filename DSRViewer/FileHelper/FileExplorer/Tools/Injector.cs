@@ -17,8 +17,11 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
     public class Injector : ImGuiChild
     {
         private string _filePath = "";
+        private bool _useSelectedFileName = false;
         private bool _success = false;
         private Action<string> _onInjectionComplete; // Колбэк для обновления дерева
+
+        public Action<string> OnInjectionComplete => _onInjectionComplete;
 
         public Injector(Action<string> onInjectionComplete = null)
         {
@@ -42,7 +45,16 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                 {
                     try
                     {
-                        _success = Inject(root, selected);
+                        if (!_useSelectedFileName)
+                            _success = Inject(root, selected, selected.Name);
+                        else
+                        {
+                            if (Path.GetExtension(_filePath) == ".dds")
+                                _success = Inject(root, selected, Path.GetFileNameWithoutExtension(_filePath));
+                            else
+                                _success = Inject(root, selected, Path.GetFileName(_filePath));
+                        }
+                            
 
                         if (_success)
                         {
@@ -61,6 +73,10 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                         ImGui.OpenPopup("InjectionError");
                     }
                 }
+
+                if (ImGui.RadioButton("Use selected file name", _useSelectedFileName))
+                    _useSelectedFileName = !_useSelectedFileName;
+
 
                 // Попап сообщения об успехе
                 if (ImGui.BeginPopupModal("InjectionSuccess", ref _success, ImGuiWindowFlags.AlwaysAutoResize))
@@ -89,7 +105,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             }
         }
 
-        private bool Inject(FileNode root, FileNode selected)
+        private bool Inject(FileNode root, FileNode selected, string newName)
         {
             if (string.IsNullOrEmpty(_filePath) || !File.Exists(_filePath))
             {
@@ -111,12 +127,13 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     var binder = new FileBinders();
                     var operation = new FileOperation
                     {
-                        Write = true,
+                        WriteObject = true,
                         ReplaceTexture = true,
                         ChangeTextureFormat = true,
+                        RenameTexture = true,
                         NewTextureBytes = newBytes,
                         NewTextureFormat = imageFlag,
-                        NewTextureName = selected.Name
+                        NewTextureName = newName
                     };
                     binder.ProcessPaths(new[] {selected.VirtualPath}, operation);
                     success = true;
@@ -127,7 +144,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     var binder = new FileBinders();
                     var operation = new FileOperation
                     {
-                        Write = true,
+                        WriteObject = true,
                         ReplaceFlver = true,
                         WriteFlver = true,
                         NewFlver = FLVER2.Read(newBytes),
@@ -140,44 +157,13 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     var binder = new FileBinders();
                     var operation = new FileOperation
                     {
-                        Write = true,
-                        Replace = true,
+                        WriteObject = true,
+                        ReplaceObject = true,
                         NewBytes = newBytes
                     };
                     binder.ProcessPaths(new[] { selected.VirtualPath }, operation); ;
                     success = true;
                 }
-                /*
-                if (selected.IsNestedDDS)
-                {
-                    byte imageFlag = 128;
-                    string imageFormat = DDSTools.ReadDDSImageFormat(newBytes);
-                    if (DDS_FlagFormatList.DDSFlagListSet.ContainsKey(imageFormat))
-                        imageFlag = Convert.ToByte(DDS_FlagFormatList.DDSFlagListSet[imageFormat]);
-                    
-                    FileBinders binder = new();
-                    binder.SetCommon(false, true, false);
-                    binder.SetDds(false, false, true, true, true, imageFlag, selected.Name, newBytes);
-                    binder.Read(selected.VirtualPath);
-                    success = true;
-                }
-
-                else if (selected.IsFlver || selected.IsNestedFlver)
-                {
-                    FileBinders binder = new();
-                    binder.SetCommon(false, true, false);
-                    binder.SetFlver(true, true, FLVER2.Read(newBytes));
-                    binder.Read(selected.VirtualPath);
-                    success = true;
-                }
-                else
-                {
-                    FileBinders binder = new();
-                    binder.SetCommon(false, true, true, newBytes);
-                    binder.Read(selected.VirtualPath);
-                    success = true;
-                }
-                */
             }
             catch (Exception ex)
             {
@@ -189,7 +175,63 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             return success;
         }
 
-        
+        public bool InjectBytes(FileNode root, FileNode targetNode, byte[] newBytes, string newName)
+        {
+            try
+            {
+                if (targetNode.IsNestedDDS)
+                {
+                    byte imageFlag = 128;
+                    string imageFormat = DDSTools.ReadDDSImageFormat(newBytes);
+                    if (DDS_FlagFormatList.DDSFlagListSet.ContainsKey(imageFormat))
+                        imageFlag = Convert.ToByte(DDS_FlagFormatList.DDSFlagListSet[imageFormat]);
+
+                    var binder = new FileBinders();
+                    var operation = new FileOperation
+                    {
+                        WriteObject = true,
+                        ReplaceTexture = true,
+                        ChangeTextureFormat = true,
+                        RenameTexture = true,
+                        NewTextureBytes = newBytes,
+                        NewTextureFormat = imageFlag,
+                        NewTextureName = newName
+                    };
+                    binder.ProcessPaths(new[] { targetNode.VirtualPath }, operation);
+                    return true;
+                }
+                else if (targetNode.IsFlver || targetNode.IsNestedFlver)
+                {
+                    var binder = new FileBinders();
+                    var operation = new FileOperation
+                    {
+                        WriteObject = true,
+                        ReplaceFlver = true,
+                        WriteFlver = true,
+                        NewFlver = FLVER2.Read(newBytes),
+                    };
+                    binder.ProcessPaths(new[] { targetNode.VirtualPath }, operation);
+                    return true;
+                }
+                else
+                {
+                    var binder = new FileBinders();
+                    var operation = new FileOperation
+                    {
+                        WriteObject = true,
+                        ReplaceObject = true,
+                        NewBytes = newBytes
+                    };
+                    binder.ProcessPaths(new[] { targetNode.VirtualPath }, operation);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Injection failed: {ex.Message}");
+                return false;
+            }
+        }
 
         private string SelectNewFile()
         {

@@ -73,7 +73,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             }
         }
 
-        public void RenderAddDcxTpfControls(FileNode selectedNode)
+        public void RenderAddTpfDcxControls(FileNode selectedNode)
         {
             if (selectedNode == null || !(selectedNode.IsBxfArchive || selectedNode.IsNestedBxfArchive))
                 return;
@@ -82,9 +82,20 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             ImGui.InputText("Texture Name", ref _newTextureName, 255);
             ImGui.SameLine();
 
-            if (ImGui.Button("Add DCX TPF"))
+            if (ImGui.Button("Add tpf.dcx"))
             {
-                AddDcxTpf(selectedNode);
+                AddTpfDcx(selectedNode);
+            }
+        }
+
+        public void RenderRemoveTpfDcxControls(FileNode selectedNode)
+        {
+            if (selectedNode == null || !(selectedNode.IsNestedTpfArchive))
+                return;
+
+            if (ImGui.Button("Remove tpf.dcx"))
+            {
+                RemoveTpfDcx(selectedNode);
             }
         }
 
@@ -99,7 +110,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             var binder = new FileBinders();
             var operation = new FileOperation
             {
-                Write = true,
+                WriteObject = true,
                 AddTexture = true,
                 NewTextureName = _newTextureName
             };
@@ -113,7 +124,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             var binder = new FileBinders();
             var operation = new FileOperation
             {
-                Write = true,
+                WriteObject = true,
                 RemoveTexture = true
             };
 
@@ -135,7 +146,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             var binder = new FileBinders();
             var operation = new FileOperation
             {
-                Write = true,
+                WriteObject = true,
                 RenameTexture = true,
                 NewTextureName = _renameTextureName
             };
@@ -149,7 +160,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             var binder = new FileBinders();
             var operation = new FileOperation
             {
-                Write = true,
+                WriteObject = true,
                 ChangeTextureFormat = true,
                 NewTextureFormat = (byte)_textureFormatFlag
             };
@@ -158,7 +169,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             _onInjectionComplete?.Invoke(selectedNode.VirtualPath);
         }
 
-        private void AddDcxTpf(FileNode selectedNode)
+        private void AddTpfDcx(FileNode selectedNode)
         {
             if (string.IsNullOrEmpty(_newArchiveName) || string.IsNullOrEmpty(_newTextureName))
             {
@@ -169,7 +180,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             var binder = new FileBinders();
             var operation = new FileOperation
             {
-                Write = true,
+                WriteObject = true,
                 AddTpfDcx = true,
                 AddTexture = true,
                 NewTpfDcxArchiveName = _newArchiveName,
@@ -178,10 +189,21 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
 
             binder.ProcessPaths(new[] { selectedNode.VirtualPath }, operation);
             _onInjectionComplete?.Invoke(selectedNode.VirtualPath);
+        }
 
-            // Очищаем поля после операции
-            _newArchiveName = "";
-            _newTextureName = "";
+        private void RemoveTpfDcx(FileNode selectedNode)
+        {
+            var binder = new FileBinders();
+            var operation = new FileOperation
+            {
+                WriteObject = true,
+                RemoveTpfDcx = true,
+            };
+
+            binder.ProcessPaths(new[] { selectedNode.VirtualPath }, operation);
+
+            var parentVirtualPath = selectedNode.VirtualPath[..selectedNode.VirtualPath.LastIndexOf('|')];
+            _onInjectionComplete?.Invoke(parentVirtualPath);
         }
 
         // Метод для отрисовки всех элементов управления
@@ -197,7 +219,8 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             RenderRemoveTextureControls(selectedNode);
             RenderRenameTextureControls(selectedNode);
             RenderReFlagTextureControls(selectedNode);
-            RenderAddDcxTpfControls(selectedNode);
+            RenderAddTpfDcxControls(selectedNode);
+            RenderRemoveTpfDcxControls(selectedNode);
         }
     }
 }

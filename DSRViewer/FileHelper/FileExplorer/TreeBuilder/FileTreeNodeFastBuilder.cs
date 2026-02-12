@@ -73,7 +73,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 ShortName = ShortString(Path.GetFileName(dirPath)),
                 VirtualPath = dirPath,
                 ShortVirtualPath = ShortString(dirPath),
-                IsFolder = true,
+                Type = NodeType.Folder,
                 ArchiveDepth = depth
             };
 
@@ -120,7 +120,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 ShortName = ShortString(Path.GetFileName(bndPath)),
                 VirtualPath = bndPath,
                 ShortVirtualPath = ShortString(bndPath),
-                IsBndArchive = true,
+                Type = NodeType.BndArchive,
                 ArchiveDepth = depth,
             };
 
@@ -135,7 +135,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 VirtualPath = tpfPath,
                 ShortName = ShortString(Path.GetFileName(tpfPath)),
                 ShortVirtualPath = ShortString(tpfPath),
-                IsTpfArchive = true,
+                Type = NodeType.TpfArchive,
                 ArchiveDepth = depth
             };
             return node;
@@ -149,7 +149,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 VirtualPath = bhdPath,
                 ShortName = ShortString(Path.GetFileName(bhdPath)),
                 ShortVirtualPath = ShortString(bhdPath),
-                IsBxfArchive = true,
+                Type = NodeType.BxfArchive,
                 ArchiveDepth = depth
             };
 
@@ -164,7 +164,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 VirtualPath = flverPath,
                 ShortName = ShortString(Path.GetFileName(flverPath)),
                 ShortVirtualPath = ShortString(flverPath),
-                IsFlver = true,
+                Type = NodeType.Flver,
                 ArchiveDepth = depth
             };
             return node;
@@ -178,7 +178,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 ShortName = ShortString(Path.GetFileName(filePath)),
                 VirtualPath = filePath,
                 ShortVirtualPath = ShortString(filePath),
-                IsFolder = false,
+                Type = NodeType.Unknown,
                 ArchiveDepth = depth
             };
             return node;

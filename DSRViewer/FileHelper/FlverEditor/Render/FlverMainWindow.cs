@@ -11,12 +11,12 @@ using DSRViewer.ImGuiHelper;
 using ImGuiNET;
 using SoulsFormats;
 using Veldrid;
-using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
 using DSRViewer.FileHelper.FlverEditor.Tools;
 using DSRViewer.FileHelper.MTDEditor.Render;
 using DSRViewer.FileHelper.flverTools.Tools;
 using DSRViewer.FileHelper.FlverEditor.Tools.FlverTexFinder;
 using DSRViewer.Core;
+using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
 
 namespace DSRViewer.FileHelper.FlverEditor.Render
 {
@@ -389,7 +389,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
 
         private void TestSave()
         {
-            List<string> saveBug = [];
             List<string> _fileList = _fileListViewer.GetFileList()
             .Select(fileNode => fileNode.VirtualPath)
             .ToList();
@@ -397,6 +396,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             FileBinders binder = new();
             var operation = new FileOperation
             {
+                UseFlverDelegate = true,
                 AdditionalFlverProcessing = (flver, realPath, path) =>
                 {
                     
@@ -412,12 +412,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 }
             };
             binder.ProcessPaths(_fileList, operation);
-
-            foreach (var str in saveBug)
-            {
-                Console.WriteLine(str);
-            }
-            File.WriteAllLines("SaveBug.txt", saveBug);
         }
 
         private void MenuBarToolsRender()
@@ -638,7 +632,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 var binder = new FileBinders();
                 var operation = new FileOperation
                 {
-                    Write = true,
+                    WriteObject = true,
                     WriteFlver = true,
                     ReplaceFlver = true,
                     NewFlver = _currentFlver

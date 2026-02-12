@@ -81,6 +81,24 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
             }
         }
 
+        private byte[] ExtractFileBytes(FileNode node)
+        {
+            var binder = new FileBinders();
+            var operation = new FileOperation { GetObject = true };
+            binder.ProcessPaths(new[] { node.VirtualPath }, operation);
+            var obj = binder.GetObject();
+
+            return obj switch
+            {
+                BinderFile file => file.Bytes,
+                TPF.Texture texture => texture.Bytes,
+                FLVER2 flver => flver.Write(),    // Write() возвращает byte[]
+                TPF tpf => tpf.Write(),
+                BND bnd => bnd.Write(),
+                _ => null
+            };
+        }
+
         /*
         private void Extract(FileNode selected)
         {

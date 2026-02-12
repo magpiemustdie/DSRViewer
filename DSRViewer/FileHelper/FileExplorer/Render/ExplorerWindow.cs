@@ -230,6 +230,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             _selectedNode = clickedNode;
         }
 
+        public List<TreeChild> GetTreeChildList() => _openTreeTabs;
 
     }
 }

@@ -72,7 +72,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 ShortName = ShortString(Path.GetFileName(dirPath)),
                 VirtualPath = dirPath,
                 ShortVirtualPath = ShortString(dirPath),
-                IsFolder = true,
+                Type = NodeType.Folder,
                 ArchiveDepth = depth
             };
 
@@ -119,7 +119,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 ShortName = ShortString(Path.GetFileName(bndPath)),
                 VirtualPath = bndPath,
                 ShortVirtualPath = ShortString(bndPath),
-                IsBndArchive = true,
+                Type = NodeType.BndArchive,
                 ArchiveDepth = depth,
             };
 
@@ -143,25 +143,25 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                     // Check if file is another BND
                     if (IsBndData(file.Bytes) && depth < MaxDepth)
                     {
-                        child.IsNestedBndArchive = true;
+                        child.Type = NodeType.NestedBndArchive;
                         child.Children.AddRange(ReadNestedBnd(file.Bytes, depth + 1, child.VirtualPath));
                     }
 
                     if (IsTpfData(file.Bytes) && depth < MaxDepth)
                     {
-                        child.IsNestedTpfArchive = true;
+                        child.Type = NodeType.NestedTpfArchive;
                         child.Children.AddRange(ReadNestedTPF(file.Bytes, depth + 1, child.VirtualPath));
                     }
 
                     if (IsBxfData(file.Bytes) && depth < MaxDepth)
                     {
-                        child.IsNestedBxfArchive = true;
+                        child.Type = NodeType.NestedBxfArchive;
                         child.Children.AddRange(ReadNestedBXF(file.Bytes, file.Name, bndPath, depth + 1, child.VirtualPath));
                     }
 
                     if (IsFlvData(file.Bytes) && depth < MaxDepth)
                     {
-                        child.IsNestedFlver = true;
+                        child.Type = NodeType.NestedFlver;
                     }
 
                     node.Children.Add(child);
@@ -185,7 +185,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 VirtualPath = tpfPath,
                 ShortName = ShortString(Path.GetFileName(tpfPath)),
                 ShortVirtualPath = ShortString(tpfPath),
-                IsTpfArchive = true,
+                Type = NodeType.TpfArchive,
                 ArchiveDepth = depth
             };
 
@@ -203,7 +203,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                         VirtualPath = $"{tpfPath}|{file_index}",
                         ShortName = ShortString(file.Name),
                         ShortVirtualPath = $"{ShortString(tpfPath)}|{file_index}",
-                        IsNestedDDS = true,
+                        Type = NodeType.NestedDds,
                         DDSFormatFlag = file.Format,
                         DDSFormat = DDSTools.ReadDDSImageFormat(file.Bytes),
                         ArchiveDepth = depth + 1
@@ -228,7 +228,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 VirtualPath = bhdPath,
                 ShortName = ShortString(Path.GetFileName(bhdPath)),
                 ShortVirtualPath = ShortString(bhdPath),
-                IsBxfArchive = true,
+                Type = NodeType.BxfArchive,
                 ArchiveDepth = depth
             };
 
@@ -255,7 +255,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
 
                         if (file.Name.EndsWith(".tpf.dcx") || file.Name.EndsWith(".tpf") || IsTpfData(DCX.Decompress(file.Bytes)) && depth < MaxDepth)
                         {
-                            child.IsNestedTpfArchive = true;
+                            child.Type = NodeType.NestedTpfArchive;
                             child.Children.AddRange(ReadNestedTPF(file.Bytes, depth + 1, child.VirtualPath));
                         }
                         file_index++;
@@ -278,7 +278,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 VirtualPath = flverPath,
                 ShortName = ShortString(Path.GetFileName(flverPath)),
                 ShortVirtualPath = ShortString(flverPath),
-                IsFlver = true,
+                Type = NodeType.Flver,
                 ArchiveDepth = depth
             };
             return node;
@@ -292,7 +292,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                 ShortName = ShortString(Path.GetFileName(filePath)),
                 VirtualPath = filePath,
                 ShortVirtualPath = ShortString(filePath),
-                IsFolder = false,
+                Type = NodeType.Unknown,
                 ArchiveDepth = depth
             };
             return node;
@@ -320,19 +320,19 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
 
                     if (IsBndData(file.Bytes) && depth < MaxDepth)
                     {
-                        node.IsNestedBndArchive = true;
+                        node.Type = NodeType.NestedBndArchive;
                         node.Children.AddRange(ReadNestedBnd(file.Bytes, depth + 1, node.VirtualPath));
                     }
 
                     if (IsTpfData(file.Bytes) && depth < MaxDepth)
                     {
-                        node.IsNestedTpfArchive = true;
+                        node.Type = NodeType.NestedTpfArchive;
                         node.Children.AddRange(ReadNestedTPF(file.Bytes, depth + 1, node.VirtualPath));
                     }
 
                     if (IsFlvData(file.Bytes) && depth < MaxDepth)
                     {
-                        node.IsNestedFlver = true;
+                        node.Type = NodeType.NestedFlver;
                     }
 
                     nodes.Add(node);
@@ -365,7 +365,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                         VirtualPath = $"{virtualPath}|{file_index}",
                         ShortName = ShortString(file.Name),
                         ShortVirtualPath = $"{ShortString(virtualPath)}|{file_index}",
-                        IsNestedDDS = true,
+                        Type = NodeType.NestedDds,
                         DDSFormatFlag = file.Format,
                         DDSFormat = DDSTools.ReadDDSImageFormat(file.Bytes),
                         Size = file.Bytes.Length,
@@ -410,7 +410,7 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
 
                         if (file.Name.EndsWith(".tpf.dcx") || file.Name.EndsWith(".tpf") || IsTpfData(DCX.Decompress(file.Bytes)) && depth < MaxDepth)
                         {
-                            node.IsNestedTpfArchive = true;
+                            node.Type = NodeType.NestedTpfArchive;
                             node.Children.AddRange(ReadNestedTPF(file.Bytes, depth + 1, node.VirtualPath));
                         }
 
