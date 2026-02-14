@@ -56,7 +56,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                         {
                             GetObject = true,
                             WriteObject = true,
-                            WriteFlver = true,
                             UseFlverDelegate = true,
                             AdditionalFlverProcessing = (flver, realPath, path) =>
                             {
@@ -83,7 +82,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                         {
                             GetObject = true,
                             WriteObject = true,
-                            WriteFlver = true,
                             UseFlverDelegate = true,
                             AdditionalFlverProcessing = (flver, realPath, path) =>
                             {
@@ -129,7 +127,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                     var operation = new FileOperation
                     {
                         WriteObject = true,
-                        WriteFlver = true,
                         UseFlverDelegate = true,
                         AdditionalFlverProcessing = (flver, realPath, path) =>
                         {

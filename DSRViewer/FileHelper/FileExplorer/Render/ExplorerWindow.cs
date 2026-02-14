@@ -21,7 +21,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
         private readonly List<TreeChild> _openTreeTabs = [];
         private readonly MTDWindow _mtdWindow;
 
-        private Vector2 _controlPanelSize = new(-1, 60);
+        private Vector2 _controlPanelSize = new(300, 60);
         private Vector2 _treeBrowserSize = new(0, -1);
         private Vector2 _treeBrowserMinSize = new(300, 300);
         private Vector2 _treeBrowserMaxSize = new(-1, -1);

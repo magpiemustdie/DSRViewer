@@ -56,10 +56,8 @@ namespace DSRViewer.FileHelper
         public string VirtualPath { get; set; } = "";
         public string ShortVirtualPath { get; set; } = "";
 
-        // ✅ Единое хранилище типа
         public NodeType Type { get; set; } = NodeType.Unknown;
 
-        // ✅ DDS‑специфичные поля остаются (формат и флаг)
         public int DDSFormatFlag { get; set; }
         public string DDSFormat { get; set; } = "";
 
@@ -68,7 +66,6 @@ namespace DSRViewer.FileHelper
         public string Parent { get; set; } = "";
         public List<FileNode> Children { get; set; } = [];
 
-        // --- Вычисляемые свойства для удобства проверок ---
         public bool IsFolder => Type == NodeType.Folder;
         public bool IsBndArchive => Type == NodeType.BndArchive || Type == NodeType.NestedBndArchive;
         public bool IsNestedBndArchive => Type == NodeType.NestedBndArchive;
@@ -82,7 +79,7 @@ namespace DSRViewer.FileHelper
         public bool IsNestedDDS => Type == NodeType.NestedDds;
 
         // --- Метод gettype (теперь просто отдаёт имя типа) ---
-        public string gettype() => Type.ToString();
+        public string GetType() => Type.ToString();
     }
 
     public enum NodeType

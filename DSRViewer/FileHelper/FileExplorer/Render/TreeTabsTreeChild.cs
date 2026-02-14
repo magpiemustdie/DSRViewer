@@ -74,8 +74,8 @@ namespace DSRViewer.FileHelper.FileExplorer.Render
             {
                 ImGui.BeginChild("Tools child", _toolsChildSize, _childFlags);
                 _extractor.Render(_selected);
-                ImGui.Separator();
-                _injector.Render(_root, _selected);
+                //ImGui.Separator();
+                //_injector.Render(_root, _selected);
                 ImGui.Separator();
                 _finder.Render(_selected);
                 ImGui.Separator();

@@ -128,12 +128,12 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     var operation = new FileOperation
                     {
                         WriteObject = true,
-                        ReplaceTexture = true,
+                        ReplaceObject = true,
                         ChangeTextureFormat = true,
-                        RenameTexture = true,
-                        NewTextureBytes = newBytes,
+                        RenameObject = true,
+                        NewObjectBytes = newBytes,
                         NewTextureFormat = imageFlag,
-                        NewTextureName = newName
+                        NewObjectName = newName
                     };
                     binder.ProcessPaths(new[] {selected.VirtualPath}, operation);
                     success = true;
@@ -145,9 +145,8 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     var operation = new FileOperation
                     {
                         WriteObject = true,
-                        ReplaceFlver = true,
-                        WriteFlver = true,
-                        NewFlver = FLVER2.Read(newBytes),
+                        ReplaceObject = true,
+                        NewObjectBytes = newBytes,
                     };
                     binder.ProcessPaths(new[] { selected.VirtualPath }, operation); ;
                     success = true;
@@ -159,7 +158,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     {
                         WriteObject = true,
                         ReplaceObject = true,
-                        NewBytes = newBytes
+                        NewObjectBytes = newBytes
                     };
                     binder.ProcessPaths(new[] { selected.VirtualPath }, operation); ;
                     success = true;
@@ -190,12 +189,12 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     var operation = new FileOperation
                     {
                         WriteObject = true,
-                        ReplaceTexture = true,
+                        ReplaceObject = true,
                         ChangeTextureFormat = true,
-                        RenameTexture = true,
-                        NewTextureBytes = newBytes,
+                        RenameObject = true,
+                        NewObjectBytes = newBytes,
                         NewTextureFormat = imageFlag,
-                        NewTextureName = newName
+                        NewObjectName = newName
                     };
                     binder.ProcessPaths(new[] { targetNode.VirtualPath }, operation);
                     return true;
@@ -206,9 +205,8 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     var operation = new FileOperation
                     {
                         WriteObject = true,
-                        ReplaceFlver = true,
-                        WriteFlver = true,
-                        NewFlver = FLVER2.Read(newBytes),
+                        ReplaceObject = true,
+                        NewObjectBytes = newBytes,
                     };
                     binder.ProcessPaths(new[] { targetNode.VirtualPath }, operation);
                     return true;
@@ -220,7 +218,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     {
                         WriteObject = true,
                         ReplaceObject = true,
-                        NewBytes = newBytes
+                        NewObjectBytes = newBytes
                     };
                     binder.ProcessPaths(new[] { targetNode.VirtualPath }, operation);
                     return true;

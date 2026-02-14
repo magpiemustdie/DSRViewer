@@ -633,9 +633,8 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 var operation = new FileOperation
                 {
                     WriteObject = true,
-                    WriteFlver = true,
-                    ReplaceFlver = true,
-                    NewFlver = _currentFlver
+                    ReplaceObject = true,
+                    NewObjectBytes = _currentFlver.Write()
                 };
                 binder.ProcessPaths(new[] { filePath }, operation);
                 Console.WriteLine($"Successfully saved changes to: {filePath}");

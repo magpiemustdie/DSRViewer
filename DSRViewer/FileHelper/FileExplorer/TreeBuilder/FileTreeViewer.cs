@@ -34,17 +34,17 @@ namespace DSRViewer.FileHelper.FileExplorer.TreeBuilder
                         && !node.IsNestedBndArchive && !node.IsNestedTpfArchive && !node.IsNestedBxfArchive)
                         flags |= ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen;
 
-                    string label = node.IsFolder ? $"[DIR] {node.Name}" :
-                                  node.IsBndArchive ? $"[BND] {node.Name}" :
-                                  node.IsBxfArchive ? $"[BXF] {node.Name}" :
-                                  node.IsTpfArchive ? $"[TPF] {node.Name}" :
-                                  node.IsDDS ? $"[DDS][{node.DDSFormatFlag}] {node.Name}" :
-                                  node.IsFlver ? $"[FLV] {node.Name}" :
-                                  node.IsNestedBndArchive ? $"{node.ID} [n_BND] {node.Name}" :
-                                  node.IsNestedBxfArchive ? $"{node.ID} [n_BXF] {node.Name}" :
-                                  node.IsNestedTpfArchive ? $"{node.ID} [n_TPF] {node.Name}" :
-                                  node.IsNestedDDS ? $"{node.ID} [n_DDS][{node.DDSFormatFlag}][{node.DDSFormat}] {node.Name}" :
-                                  node.IsNestedFlver ? $"{node.ID} [n_FLV] {node.Name}" :
+                    string label = node.IsFolder ? $"{node.ID}: [DIR] {node.Name}" :
+                                  node.IsBndArchive ? $"{node.ID}: [BND] {node.Name}" :
+                                  node.IsBxfArchive ? $"{node.ID}: [BXF] {node.Name}" :
+                                  node.IsTpfArchive ? $"{node.ID}: [TPF] {node.Name}" :
+                                  node.IsDDS ? $"{node.ID}: [DDS][{node.DDSFormatFlag}][{node.DDSFormat}] {node.Name}" :
+                                  node.IsFlver ? $"{node.ID} [FLV]: {node.Name}" :
+                                  node.IsNestedBndArchive ? $"{node.ID}: [n_BND] {node.Name}" :
+                                  node.IsNestedBxfArchive ? $"{node.ID}: [n_BXF] {node.Name}" :
+                                  node.IsNestedTpfArchive ? $"{node.ID}: [n_TPF] {node.Name}" :
+                                  node.IsNestedDDS ? $"{node.ID}: [n_DDS][{node.DDSFormatFlag}][{node.DDSFormat}] {node.Name}" :
+                                  node.IsNestedFlver ? $"{node.ID}: [n_FLV] {node.Name}" :
                                   $"{node.ID} {node.Name}";
 
                     if (_selected == node)

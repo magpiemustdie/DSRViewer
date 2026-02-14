@@ -47,9 +47,10 @@ namespace DSRViewer.FileHelper
 
                 var filePath = segments[0];
                 var indices = segments.Skip(1)
-                                 .Select(s => int.TryParse(s, out var i) ? i : -1)
-                                 .Where(i => i >= 0)
-                                 .ToArray();
+                    .Where(s => !string.IsNullOrEmpty(s))
+                    .Select(s => int.TryParse(s, out var i) ? i : -1)
+                    .Where(i => i >= 0)
+                    .ToArray();
 
                 if (!grouped.ContainsKey(filePath))
                     grouped[filePath] = new List<int[]>();
@@ -63,6 +64,7 @@ namespace DSRViewer.FileHelper
         private void ProcessFileGroup(string filePath, List<int[]> indicesList, FileOperation operation)
         {
             _currentRealPath = filePath;
+            Console.WriteLine(_currentRealPath);
 
             if (IsBnd(filePath))
                 ProcessBnd(filePath, indicesList, operation);
@@ -71,13 +73,13 @@ namespace DSRViewer.FileHelper
             else if (IsBxf(filePath))
                 ProcessBxf(filePath, indicesList, operation);
             else if (IsFlver(filePath))
-                ProcessFlver(filePath, operation);
+                ProcessFlver(filePath, indicesList, operation);
         }
 
         private void ProcessInnerFile(BinderFile file, List<int[]> indicesList, FileOperation operation)
         {
             Console.WriteLine($"Processing inner file {file.Name}");
-            
+
             if (indicesList.Count == 0 || indicesList.All(indices => indices.Length == 0))
             {
                 ProcessFileData(file, operation);
@@ -98,6 +100,20 @@ namespace DSRViewer.FileHelper
         {
             Console.WriteLine("Processing file data");
 
+            // Общие операции с файлом внутри контейнера
+            if (operation.RenameObject)
+            {
+                file.Name = operation.NewObjectName;
+                Console.WriteLine($"Renamed inner file to {file.Name}");
+            }
+
+            if (operation.ReplaceObject && operation.NewObjectBytes.Length > 0)
+            {
+                file.Bytes = operation.NewObjectBytes;
+                Console.WriteLine($"Replaced bytes of inner file {file.Name}");
+            }
+
+            // Специфическая обработка по типу данных
             if (IsFlvData(file.Bytes))
             {
                 Console.WriteLine("Processing FLVER data");
@@ -124,15 +140,54 @@ namespace DSRViewer.FileHelper
             }
         }
 
+        // ---------- BND ----------
         private void ProcessBnd(string path, List<int[]> indicesList, FileOperation operation)
         {
             Console.WriteLine($"Processing BND archive {path}");
             var bnd = BND3.Read(path);
+            ProcessBndCore(bnd, indicesList, operation);
+            if (operation.WriteObject)
+                bnd.Write(path);
+        }
+        private void ProcessBndData(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        {
+            Console.WriteLine($"Processing BND data {file.Name}");
+            var bnd = BND3.Read(file.Bytes);
+            ProcessBndCore(bnd, indicesList, operation);
+            if (operation.WriteObject)
+                file.Bytes = bnd.Write();
+        }
+        private void ProcessBndCore(BND3 bnd, List<int[]> indicesList, FileOperation operation)
+        {
+            // Операции на самом контейнере (без индексов)
+            if (indicesList.Any(indices => indices.Length == 0))
+            {
+                if (operation.AddObject)
+                {
+                    var newFile = new BinderFile
+                    {
+                        Name = string.IsNullOrEmpty(operation.NewObjectName) ? "NewFile" : operation.NewObjectName,
+                        Bytes = operation.NewObjectBytes.Length > 0 ? operation.NewObjectBytes : []
+                    };
+                    bnd.Files.Add(newFile);
+                    Console.WriteLine($"Added new file '{newFile.Name}' to BND");
+                }
+            }
 
+            // Обработка конкретных файлов по индексам
             var fileGroups = indicesList
                 .Where(indices => indices.Length > 0)
                 .GroupBy(indices => indices[0])
                 .ToDictionary(g => g.Key, g => g.Select(indices => indices.Skip(1).ToArray()).ToList());
+
+            foreach (var i in fileGroups)
+            {
+                Console.WriteLine(i);
+                foreach (var j in i.Value)
+                {
+                    Console.WriteLine(j);
+                }
+            }
 
             foreach (var group in fileGroups)
             {
@@ -142,44 +197,119 @@ namespace DSRViewer.FileHelper
                 if (fileIndex < 0 || fileIndex >= bnd.Files.Count) continue;
 
                 var file = bnd.Files[fileIndex];
+
+                // Удаление файла
+                if (operation.RemoveObject && innerIndices.Count == 1 && innerIndices[0].Length == 0)
+                {
+                    bnd.Files.RemoveAt(fileIndex);
+                    Console.WriteLine($"Removed file at index {fileIndex} from BND");
+                    continue;
+                }
+
+                // Переименование файла
+                if (operation.RenameObject && innerIndices.Count == 1 && innerIndices[0].Length == 0)
+                {
+                    file.Name = operation.NewObjectName;
+                    Console.WriteLine($"Renamed file at index {fileIndex} to {file.Name}");
+                    continue;
+                }
+
+                // Рекурсивная обработка внутренностей файла
                 ProcessInnerFile(file, innerIndices, operation);
             }
-
-            if (indicesList.Any(indices => indices.Length == 0))
-            {
-                ProcessObject(bnd, operation);
-            }
-
-            if (operation.WriteObject)
-                bnd.Write(path);
         }
 
-        private void ProcessBndData(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        // ---------- TPF ----------
+        private void ProcessTpf(string path, List<int[]> indicesList, FileOperation operation)
         {
-            Console.WriteLine($"Processing BND data {file.Name}");
-            var bnd = BND3.Read(file.Bytes);
+            Console.WriteLine($"Processing TPF archive {path}");
+            var tpf = TPF.Read(path);
+            ProcessTpfCore(tpf, indicesList, operation);
+            if (operation.WriteObject)
+                tpf.Write(path);
+        }
 
-            var fileGroups = indicesList
-                .Where(indices => indices.Length > 0)
-                .GroupBy(indices => indices[0])
-                .ToDictionary(g => g.Key, g => g.Select(indices => indices.Skip(1).ToArray()).ToList());
+        private void ProcessTpfData(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        {
+            Console.WriteLine($"Processing TPF data {file.Name}");
+            var tpf = TPF.Read(file.Bytes);
+            ProcessTpfCore(tpf, indicesList, operation);
+            if (operation.WriteObject)
+                file.Bytes = tpf.Write();
+        }
 
-            foreach (var group in fileGroups)
+        private void ProcessTpfCore(TPF tpf, List<int[]> indicesList, FileOperation operation)
+        {
+            foreach (var indices in indicesList)
             {
-                var innerIndex = group.Key;
-                var innerIndices = group.Value;
-
-                if (innerIndex >= 0 && innerIndex < bnd.Files.Count)
+                if (indices.Length == 0)
                 {
-                    var innerFile = bnd.Files[innerIndex];
-                    ProcessInnerFile(innerFile, innerIndices, operation);
+                    // Операции на самом TPF
+                    if (operation.GetObject) _mainObject = tpf;
+                    if (operation.ReplaceObject) tpf = TPF.Read(operation.NewObjectBytes);
+
+                    // Общее добавление объекта (текстуры)
+                    if (operation.AddObject)
+                    {
+                        tpf.Textures.Add(CreateTextureFromBytes(operation.NewObjectBytes, operation.NewObjectName));
+                        Console.WriteLine($"Added new texture via AddObject");
+                    }
+                    continue;
+                }
+
+                var textureIndex = indices[0];
+                if (textureIndex >= 0 && textureIndex < tpf.Textures.Count)
+                {
+                    var texture = tpf.Textures[textureIndex];
+
+                    // Удаление текстуры (общее)
+                    if (operation.RemoveObject)
+                    {
+                        tpf.Textures.RemoveAt(textureIndex);
+                        Console.WriteLine($"Removed texture at index {textureIndex} via RemoveObject");
+                        continue;
+                    }
+
+                    if (operation.ReplaceObject)
+                    {
+                        texture.Name = operation.NewObjectName;
+                        texture.Bytes = operation.NewObjectBytes;
+                        Console.WriteLine($"Replaced texture at index {textureIndex} to {texture.Name} via RenameObject");
+                        continue;
+                    }
+
+                    // Переименование текстуры (общее)
+                    if (operation.RenameObject)
+                    {
+                        texture.Name = operation.NewObjectName;
+                        Console.WriteLine($"Renamed texture at index {textureIndex} to {texture.Name} via RenameObject");
+                        continue;
+                    }
+
+                    if (operation.ChangeTextureFormat)
+                    {
+                        texture.Format = operation.NewTextureFormat;
+                    }
+
+                    if (operation.GetObject)
+                    {
+                        _mainObject = texture;
+                    }
                 }
             }
-
-            if (operation.WriteObject)
-                file.Bytes = bnd.Write();
         }
 
+        private TPF.Texture CreateTextureFromBytes(byte[] bytes, string name)
+        {
+            return new TPF.Texture
+            {
+                Name = string.IsNullOrEmpty(name) ? "NewTexture" : name,
+                Platform = TPF.TPFPlatform.PC,
+                Bytes = bytes.Length > 0 ? bytes : DDSTools.fatcat
+            };
+        }
+
+        // ---------- BXF ----------
         private void ProcessBxf(string bhdPath, List<int[]> indicesList, FileOperation operation)
         {
             Console.WriteLine($"Processing BXF archive {bhdPath}");
@@ -187,46 +317,7 @@ namespace DSRViewer.FileHelper
             if (!File.Exists(bdtPath)) return;
 
             var bxf = BXF3.Read(bhdPath, bdtPath);
-
-            var fileGroups = indicesList
-                .Where(indices => indices.Length > 0)
-                .GroupBy(indices => indices[0])
-                .ToDictionary(g => g.Key, g => g.Select(indices => indices.Skip(1).ToArray()).ToList());
-
-            foreach (var group in fileGroups)
-            {
-                var fileIndex = group.Key;
-                var innerIndices = group.Value;
-
-                if (fileIndex >= 0 && fileIndex < bxf.Files.Count)
-                {
-                    var file = bxf.Files[fileIndex];
-                    ProcessInnerFile(file, innerIndices, operation);
-                }
-            }
-
-            if (indicesList.Any(indices => indices.Length == 0))
-            {
-                if (operation.AddTpfDcx) AddTpfDcxToBxf(bxf, operation);
-            }
-
-            if (operation.RemoveTpfDcx && indicesList.Count == 1)
-            {
-                var indices = indicesList[0];
-                if (indices.Length == 1)
-                {
-                    var tpfDcxIndex = indices[0];
-                    if (tpfDcxIndex >= 0 && tpfDcxIndex < bxf.Files.Count)
-                    {
-                        bxf.Files.RemoveAt(tpfDcxIndex);
-                        Console.WriteLine($"Removed tpf.dcx at index {tpfDcxIndex}");
-                    }
-                }
-                else if (indices.Length == 0)
-                {
-                    Console.WriteLine("Cannot remove tpf.dcx without specifying index");
-                }
-            }
+            ProcessBxfCore(bxf, indicesList, operation);
 
             if (operation.WriteObject)
                 bxf.Write(bhdPath, bdtPath);
@@ -239,46 +330,7 @@ namespace DSRViewer.FileHelper
             if (!File.Exists(bdtPath)) return;
 
             var bxf = BXF3.Read(file.Bytes, bdtPath);
-
-            var fileGroups = indicesList
-                .Where(indices => indices.Length > 0)
-                .GroupBy(indices => indices[0])
-                .ToDictionary(g => g.Key, g => g.Select(indices => indices.Skip(1).ToArray()).ToList());
-
-            foreach (var group in fileGroups)
-            {
-                var innerIndex = group.Key;
-                var innerIndices = group.Value;
-
-                if (innerIndex >= 0 && innerIndex < bxf.Files.Count)
-                {
-                    var innerFile = bxf.Files[innerIndex];
-                    ProcessInnerFile(innerFile, innerIndices, operation);
-                }
-            }
-
-            if (indicesList.Any(indices => indices.Length == 0))
-            {
-                if (operation.AddTpfDcx) AddTpfDcxToBxf(bxf, operation);
-            }
-
-            if (operation.RemoveTpfDcx && indicesList.Count == 1)
-            {
-                var indices = indicesList[0];
-                if (indices.Length == 1)
-                {
-                    var tpfDcxIndex = indices[0];
-                    if (tpfDcxIndex >= 0 && tpfDcxIndex < bxf.Files.Count)
-                    {
-                        bxf.Files.RemoveAt(tpfDcxIndex);
-                        Console.WriteLine($"Removed tpf.dcx at index {tpfDcxIndex}");
-                    }
-                }
-                else if (indices.Length == 0)
-                {
-                    Console.WriteLine("Cannot remove tpf.dcx without specifying index");
-                }
-            }
+            ProcessBxfCore(bxf, indicesList, operation);
 
             if (operation.WriteObject)
             {
@@ -288,86 +340,114 @@ namespace DSRViewer.FileHelper
             }
         }
 
-        private void ProcessTpf(string path, List<int[]> indicesList, FileOperation operation)
+        private void ProcessBxfCore(BXF3 bxf, List<int[]> indicesList, FileOperation operation)
         {
-            Console.WriteLine($"Processing TPF archive {path}");
-            var tpf = TPF.Read(path);
-
-            ProcessTpfIndices(tpf, indicesList, operation);
-
-            if (operation.WriteObject)
-                tpf.Write(path);
-        }
-
-        private void ProcessTpfData(BinderFile file, List<int[]> indicesList, FileOperation operation)
-        {
-            Console.WriteLine($"Processing TPF data {file.Name}");
-            var tpf = TPF.Read(file.Bytes);
-
-            ProcessTpfIndices(tpf, indicesList, operation);
-
-            if (operation.WriteObject)
-                file.Bytes = tpf.Write();
-        }
-
-        private void ProcessTpfIndices(TPF tpf, List<int[]> indicesList, FileOperation operation)
-        {
-            foreach (var indices in indicesList)
+            // Операции на самом BXF (без индексов)
+            if (indicesList.Any(indices => indices.Length == 0))
             {
-                if (indices.Length == 0)
+                if (operation.AddObject)
                 {
-                    if (operation.GetObject) _mainObject = tpf;
-                    if (operation.ReplaceObject) tpf = TPF.Read(operation.NewBytes);
-                    if (operation.AddTexture) tpf.Textures.Add(CreateNewTexture(operation));
+                    var newFile = new BinderFile
+                    {
+                        Name = string.IsNullOrEmpty(operation.NewObjectName) ? GenerateUniqueFileName(bxf, ".file") : operation.NewObjectName,
+                        Bytes = operation.NewObjectBytes.Length > 0 ? operation.NewObjectBytes : []
+                    };
+                    bxf.Files.Add(newFile);
+                    Console.WriteLine($"Added new file '{newFile.Name}' to BXF via AddObject");
+                }
+
+                // Специфичное добавление TPF.DCX
+                if (operation.AddTpfDcx)
+                    AddTpfDcxToBxf(bxf, operation);
+            }
+
+            // Обработка конкретных файлов по индексам
+            var fileGroups = indicesList
+                .Where(indices => indices.Length > 0)
+                .GroupBy(indices => indices[0])
+                .ToDictionary(g => g.Key, g => g.Select(indices => indices.Skip(1).ToArray()).ToList());
+
+            foreach (var group in fileGroups)
+            {
+                var fileIndex = group.Key;
+                var innerIndices = group.Value;
+
+                if (fileIndex < 0 || fileIndex >= bxf.Files.Count) continue;
+
+                var file = bxf.Files[fileIndex];
+
+                // Удаление файла
+                if (operation.RemoveObject && innerIndices.Count == 1 && innerIndices[0].Length == 0)
+                {
+                    bxf.Files.RemoveAt(fileIndex);
+                    Console.WriteLine($"Removed file at index {fileIndex} from BXF via RemoveObject");
                     continue;
                 }
 
-                var textureIndex = indices[0];
-                if (textureIndex >= 0 && textureIndex < tpf.Textures.Count)
+                // Переименование файла
+                if (operation.RenameObject && innerIndices.Count == 1 && innerIndices[0].Length == 0)
                 {
-                    var texture = tpf.Textures[textureIndex];
-                    ProcessTexture(texture, operation);
+                    file.Name = operation.NewObjectName;
+                    Console.WriteLine($"Renamed file at index {fileIndex} to {file.Name} via RenameObject");
+                    continue;
                 }
+
+                ProcessInnerFile(file, innerIndices, operation);
             }
 
-            if (operation.RemoveTexture && indicesList.Count == 1)
+            // Специфичное удаление TPF.DCX (для обратной совместимости)
+            if (operation.RemoveTpfDcx && indicesList.Count == 1)
             {
                 var indices = indicesList[0];
                 if (indices.Length == 1)
                 {
-                    var textureIndex = indices[0];
-                    if (textureIndex >= 0 && textureIndex < tpf.Textures.Count)
+                    var tpfDcxIndex = indices[0];
+                    if (tpfDcxIndex >= 0 && tpfDcxIndex < bxf.Files.Count)
                     {
-                        tpf.Textures.RemoveAt(textureIndex);
-                        Console.WriteLine($"Removed texture at index {textureIndex}");
+                        bxf.Files.RemoveAt(tpfDcxIndex);
+                        Console.WriteLine($"Removed tpf.dcx at index {tpfDcxIndex} via RemoveTpfDcx");
                     }
-                }
-                else if (indices.Length == 0)
-                {
-                    Console.WriteLine("Cannot remove texture without specifying index");
                 }
             }
         }
 
-        private void ProcessTexture(TPF.Texture texture, FileOperation operation)
-        {
-            Console.WriteLine($"Processing texture {texture.Name}");
-            if (operation.GetObject) _mainObject = texture;
-            if (operation.ReplaceTexture) texture.Bytes = operation.NewTextureBytes;
-            if (operation.RenameTexture) texture.Name = operation.NewTextureName;
-            if (operation.ChangeTextureFormat) texture.Format = operation.NewTextureFormat;
-        }
-
-        private void ProcessFlver(string path, FileOperation operation)
+        // ---------- FLVER ----------
+        private void ProcessFlver(string path, List<int[]> indicesList, FileOperation operation)
         {
             Console.WriteLine($"Processing FLVER file {path}");
             var flver = FLVER2.Read(path);
 
-            if (operation.GetObject) _mainObject = flver;
-            if (operation.ReplaceFlver) flver = operation.NewFlver;
-            if (operation.UseFlverDelegate) operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, path);
+            // Операции на самом файле
+            if (indicesList.Any(indices => indices.Length == 0))
+            {
+                if (operation.GetObject) _mainObject = flver;
+                if (operation.ReplaceObject) flver = FLVER2.Read(operation.NewObjectBytes);
+                if (operation.UseFlverDelegate)
+                    operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, path);
 
-            if (operation.WriteFlver)
+                // Переименование файла на диске
+                if (operation.RenameObject && !string.IsNullOrEmpty(operation.NewObjectName))
+                {
+                    var dir = Path.GetDirectoryName(path);
+                    var newPath = Path.Combine(dir ?? "", operation.NewObjectName);
+                    if (!path.Equals(newPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Move(path, newPath);
+                        Console.WriteLine($"Renamed FLVER file to {newPath}");
+                        path = newPath; // обновляем для последующей записи
+                    }
+                }
+
+                // Удаление файла (осторожно!)
+                if (operation.RemoveObject)
+                {
+                    File.Delete(path);
+                    Console.WriteLine($"Deleted FLVER file {path}");
+                    return; // файл удалён, запись не нужна
+                }
+            }
+
+            if (operation.WriteObject)
             {
                 byte[] original = File.ReadAllBytes(path);
                 WriteFlverSafe(flver, path, original);
@@ -378,14 +458,21 @@ namespace DSRViewer.FileHelper
         {
             Console.WriteLine($"Processing FLVER file {file.Name}");
             var flver = FLVER2.Read(file.Bytes);
+
             if (operation.GetObject) _mainObject = flver;
-            if (operation.ReplaceFlver) flver = operation.NewFlver;
-            if (operation.UseFlverDelegate) operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, file.Name);
-            if (operation.RenameObject) file.Name = operation.NewObjectName;
-            if (operation.WriteFlver)
+            if (operation.ReplaceObject) flver = FLVER2.Read(operation.NewObjectBytes);
+            if (operation.UseFlverDelegate)
+                operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, file.Name);
+
+            // Переименование файла внутри контейнера
+            if (operation.RenameObject)
+                file.Name = operation.NewObjectName;
+
+            if (operation.WriteObject)
                 file.Bytes = WriteFlverSafe(flver, file.Bytes, file.Name);
         }
 
+        // ---------- DCX ----------
         private void ProcessDcxData(BinderFile file, List<int[]> indicesList, FileOperation operation)
         {
             Console.WriteLine($"Processing DCX data {file.Name}");
@@ -396,13 +483,26 @@ namespace DSRViewer.FileHelper
 
                 ProcessInnerFile(tempFile, indicesList, operation);
 
-                // in any case
-                file.Bytes = DCX.Compress(tempFile.Bytes, dcxType);
-
+                // Общие операции с самим DCX (без индексов)
                 if (indicesList.Any(indices => indices.Length == 0))
                 {
-                    if (operation.GetObject) _mainObject = file;
+                    if (operation.RenameObject)
+                        file.Name = operation.NewObjectName;
+
+                    if (operation.GetObject)
+                        _mainObject = file;
+
+                    // Замена содержимого DCX
+                    if (operation.ReplaceObject && operation.NewObjectBytes.Length > 0)
+                    {
+                        file.Bytes = operation.NewObjectBytes;
+                        Console.WriteLine($"Replaced DCX data of {file.Name}");
+                        return; // уже записали новые сжатые данные
+                    }
                 }
+
+                // Сжатие обратно, если были изменения в tempFile
+                file.Bytes = DCX.Compress(tempFile.Bytes, dcxType);
             }
             catch (Exception ex)
             {
@@ -411,45 +511,27 @@ namespace DSRViewer.FileHelper
                 _errorLogs.Add(errorMsg);
             }
         }
-        private void ProcessObject(object obj, FileOperation operation)
-        {
-            if (operation.GetObject) _mainObject = obj;
-        }
+
+        // ---------- Вспомогательные методы ----------
 
         private void AddTpfDcxToBxf(BXF3 bxf, FileOperation operation)
         {
             Console.WriteLine($"Adding TPF.DCX archive to BXF");
-
             try
             {
-                // Создаем новый TPF
                 var tpf = new TPF();
                 tpf.Platform = TPF.TPFPlatform.PC;
 
-                // Добавляем текстуры если требуется
-                if (operation.AddTexture)
-                {
-                    tpf.Textures.Add(CreateNewTexture(operation));
-                }
+                tpf.Textures.Add(CreateNewTexture(operation));
 
-                // Дополнительная обработка через делегат
-                if (operation.UseTexDelegate)
-                    operation.AdditionalTexProcessing?.Invoke(null, _currentRealPath);
-
-                // Записываем TPF и сжимаем в DCX
                 var tpfBytes = tpf.Write();
-                var dcxType = DCX.Type.DCX_DFLT_10000_24_9; // или другой тип DCX, используемый в игре
+
+                var dcxType = DCX.Type.DCX_DFLT_10000_24_9;
                 var compressedTpf = DCX.Compress(tpfBytes, dcxType);
-                var newFileName = "";
-                // Создаем новый файл для BXF
-                if (operation.NewTpfDcxArchiveName != "")
-                {
-                    newFileName = operation.NewTpfDcxArchiveName;
-                }
-                else
-                {
-                    newFileName = GenerateUniqueFileName(bxf, ".tpf.dcx");
-                }
+
+                var newFileName = string.IsNullOrEmpty(operation.NewTpfDcxArchiveName)
+                    ? GenerateUniqueFileName(bxf, ".tpf.dcx")
+                    : operation.NewTpfDcxArchiveName;
 
                 var newFile = new BinderFile
                 {
@@ -457,14 +539,11 @@ namespace DSRViewer.FileHelper
                     Bytes = compressedTpf
                 };
 
-
                 bxf.Files.Add(newFile);
                 Console.WriteLine($"Added TPF.DCX archive as {newFileName} to BXF");
 
                 if (operation.GetObject)
-                {
                     _mainObject = newFile;
-                }
             }
             catch (Exception ex)
             {
@@ -474,38 +553,25 @@ namespace DSRViewer.FileHelper
             }
         }
 
-        // Вспомогательный метод для генерации уникального имени файла
         private string GenerateUniqueFileName(BXF3 bxf, string extension)
         {
-            var baseName = "new_texture";
+            var baseName = "new_file";
             var counter = 0;
             string fileName;
-
             do
             {
                 fileName = $"{baseName}_{counter:000}{extension}";
                 counter++;
             }
             while (bxf.Files.Any(f => f.Name.Equals(fileName, StringComparison.OrdinalIgnoreCase)));
-
             return fileName;
         }
 
         private static TPF.Texture CreateNewTexture(FileOperation operation)
         {
-            if (operation.NewTextureName != "")
-            {
-                return new TPF.Texture
-                {
-                    Name = operation.NewTextureName,
-                    Platform = TPF.TPFPlatform.PC,
-                    Bytes = DDSTools.fatcat
-                };
-            }
-
             return new TPF.Texture
             {
-                Name = "New tex",
+                Name = string.IsNullOrEmpty(operation.NewObjectName) ? "NewTex" : operation.NewObjectName.Split("tpf.dcx")[0],
                 Platform = TPF.TPFPlatform.PC,
                 Bytes = DDSTools.fatcat
             };
@@ -547,7 +613,6 @@ namespace DSRViewer.FileHelper
             {
                 bhdPath.Replace(".tpfbhd", ".tpfbdt", StringComparison.OrdinalIgnoreCase)
             };
-
             return possiblePaths.FirstOrDefault(File.Exists) ?? "";
         }
 
@@ -562,13 +627,12 @@ namespace DSRViewer.FileHelper
             return "";
         }
 
+        // ---------- Проверки типов ----------
         private static bool IsBnd(string path) => HasExtension(path,
             ".chrbnd", ".partsbnd", ".ffxbnd", ".rumblebnd", ".objbnd", ".fgbnd", ".msgbnd", ".mtdbnd", ".anibnd", ".chresdbnd", ".remobnd", ".shaderbnd", ".parambnd");
-
         private static bool IsTpf(string path) => HasExtension(path, ".tpf");
         private static bool IsFlver(string path) => HasExtension(path, ".flver");
         private static bool IsBxf(string path) => HasExtension(path, ".tpfbhd");
-
         private static bool HasExtension(string path, params string[] extensions)
         {
             var pathLower = path.ToLowerInvariant();
@@ -594,45 +658,43 @@ namespace DSRViewer.FileHelper
 
     public class FileOperation
     {
-        public byte[] NewBytes { get; set; } = [];
-
-        //any object
+        // Общие операции
         public bool GetObject { get; set; }
         public bool WriteObject { get; set; }
         public bool ReplaceObject { get; set; }
-        public bool RenameObject { get; set; }
         public bool RemoveObject { get; set; }
-        public string NewObjectName { get; set; }
+        public bool RenameObject { get; set; }
+        public string NewObjectName { get; set; } = "";
+        public byte[] NewObjectBytes { get; set; } = [];   // для AddObject и ReplaceObject
+        public bool AddObject { get; set; }
 
-        //flver
+        // Для обратной совместимости (замена всего объекта)
+        //public byte[] NewBytes { get; set; } = [];
 
-        public bool WriteFlver { get; set; }
-        public bool ReplaceFlver { get; set; }
-        public FLVER2 NewFlver { get; set; } = new();
+        // FLVER
+        //public bool WriteFlver { get; set; }
+        //public bool ReplaceFlver { get; set; }
+        //public FLVER2 NewFlver { get; set; } = new();
 
-        //tpf
-        public bool AddTexture { get; set; }
-        public bool RemoveTexture { get; set; }
-        public bool ReplaceTexture { get; set; }
-
-        //tpf.texture
-        public bool RenameTexture { get; set; }
+        // TPF (специфичные)
+        //public bool AddTexture { get; set; }
+        //public bool RemoveTexture { get; set; }
+        //public bool ReplaceTexture { get; set; }
+        //public bool RenameTexture { get; set; }
         public bool ChangeTextureFormat { get; set; }
-        public byte[] NewTextureBytes { get; set; } = [];
+        //public byte[] NewTextureBytes { get; set; } = [];
         public byte NewTextureFormat { get; set; }
-        public string NewTextureName { get; set; } = "";
+        //public string NewTextureName { get; set; } = "";
 
-        // bxf.tpf.dcx
+        // BXF (специфичные)
         public bool AddTpfDcx { get; set; }
         public bool RemoveTpfDcx { get; set; }
-        public string NewTpfDcxArchiveName = "";
+        public string NewTpfDcxArchiveName { get; set; } = "";
 
-        //Delegates
+        // Делегаты
         public bool UseFlverDelegate { get; set; }
         public bool UseTexDelegate { get; set; }
         public Action<FLVER2, string, string> AdditionalFlverProcessing { get; set; }
         public Action<TPF.Texture, string> AdditionalTexProcessing { get; set; }
-
-        //public bool ShouldWrite => Write || Replace || WriteFlver || ReplaceFlver || ReplaceTexture || RemoveTexture || RenameTexture || ChangeTextureFormat;
     }
 }

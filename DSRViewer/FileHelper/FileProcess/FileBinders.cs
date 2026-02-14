@@ -4,7 +4,7 @@ using System.Linq;
 using DSRViewer.FileHelper.FileExplorer.DDSHelper;
 using SoulsFormats;
 
-namespace DSRViewer.FileHelper
+namespace DSRViewer.FileHelper.FileProcess
 {
     public class FileBindersSolo
     {
@@ -127,7 +127,7 @@ namespace DSRViewer.FileHelper
             if (IsBndData(f.Bytes)) ProcessBnd(f, i, idx);
             else if (IsTpfData(f.Bytes)) ProcessTpf(f, i, idx);
             else if (IsBxfData(f.Bytes)) ProcessBxf(f, p, i, idx);
-            else if (IsFlvData(f.Bytes)) ProcessFlv(f, i, idx); 
+            else if (IsFlvData(f.Bytes)) ProcessFlv(f, i, idx);
             else if (IsDcxData(f.Bytes)) ProcessTpf(f, i, idx);
         }
 
@@ -157,7 +157,7 @@ namespace DSRViewer.FileHelper
             if (idx + 1 < i.Length) Process(bnd.Files[i[idx + 1]], "", i, idx + 1);
 
             if (_replace && idx == i.Length - 1) bnd = BND3.Read(_newBytes);
-            if (_write || (_replace && idx == i.Length - 1)) f.Bytes = bnd.Write();
+            if (_write || _replace && idx == i.Length - 1) f.Bytes = bnd.Write();
         }
 
         private void ProcessTpf(BinderFile f, int[] i, int idx)
@@ -169,7 +169,7 @@ namespace DSRViewer.FileHelper
 
             if (_ddsAdd && idx == i.Length - 1) AddTex(tpf);
             if (_replace && idx == i.Length - 1) tpf = TPF.Read(_newBytes);
-            if (_write || (_replace && idx == i.Length - 1)) f.Bytes = tpf.Write();
+            if (_write || _replace && idx == i.Length - 1) f.Bytes = tpf.Write();
         }
 
         private void ProcessFlv(BinderFile f, int[] i, int idx)
@@ -207,10 +207,12 @@ namespace DSRViewer.FileHelper
         private static byte[] WriteSafe(FLVER2 f, string n, byte[] b)
         {
             try { return f.Write(); }
-            catch {
+            catch
+            {
                 Console.WriteLine("Problematic FLVER");
                 File.AppendAllText("problematic_flvers.txt", $"{n}{Environment.NewLine}");
-                return b; }
+                return b;
+            }
         }
 
         private static void WriteSafe(FLVER2 f, string p)
@@ -263,7 +265,8 @@ namespace DSRViewer.FileHelper
                 case FLVER2 f:
                     {
                         try { f.Write(p); }
-                        catch { 
+                        catch
+                        {
                             Console.WriteLine("Problematic FLVER");
                             File.AppendAllText("problematic_flvers.txt", $"{name}{Environment.NewLine}");
                         }

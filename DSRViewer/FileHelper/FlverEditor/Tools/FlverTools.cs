@@ -54,9 +54,8 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                 var operation = new FileOperation
                 {
                     WriteObject = true,
-                    ReplaceFlver = true,
-                    WriteFlver = true,
-                    NewFlver = flver
+                    ReplaceObject = true,
+                    NewObjectBytes = flver.Write()
                 };
                 binder.ProcessPaths(new[] { virtualPath }, operation);
                 Console.WriteLine("Write Done");
