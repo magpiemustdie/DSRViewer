@@ -1,21 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DSRViewer.FileHelper;
+using DSRViewer.FileHelper.MTDEditor.Render;
 using SoulsFormats;
-using System.IO;
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing.Text;
+using System.IO;
+using System.Linq;
+using System.Numerics;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Xml.Linq;
 using Veldrid;
 using Vortice.Direct3D11;
-using System.Text.RegularExpressions;
-using System.Collections;
-using System.Xml.Linq;
-using System.Numerics;
-using DSRViewer.FileHelper;
-using DSRViewer.FileHelper.MTDEditor.Render;
+using static SoulsFormats.FLVER2.Texture;
 
 namespace DSRViewer.FileHelper.FlverEditor.Tools
 {
@@ -182,14 +183,14 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                 {
                     foreach (var mtdTex in mtd.TexType)
                     {
-                        temp_texList.Add(new FLVER2.Texture(mtdTex, "", new Vector2(1, 1), 1, true, 0, 0, 0));
+                        temp_texList.Add(new FLVER2.Texture(mtdTex, "", new Vector2(1, 1), TilingType.Repeat, TilingType.Repeat, 0, 0, 0));
                     }
 
                     for (int i = 0; i < temp_texList.Count; i++)
                     {
                         for (int j = 0; j < textures.Count; j++)
                         {
-                            if (textures[j].Type == temp_texList[i].Type)
+                            if (textures[j].ParamName == temp_texList[i].ParamName)
                             {
                                 temp_texList[i] = textures[j];
                             }
@@ -200,11 +201,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
 
                     foreach (var tex in temp_texList)
                     {
-                        if (tex.Type == "g_Diffuse")
+                        if (tex.ParamName == "g_Diffuse")
                         {
                             temp_texPath = tex.Path;
                         }
-                        if (tex.Type == "g_Height")
+                        if (tex.ParamName == "g_Height")
                         {
                             if (temp_texPath.ToLower().EndsWith(".tga"))
                             {
@@ -228,7 +229,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
             {
                 foreach (var tex in mat.Textures)
                 {
-                    gTypeList.Add(tex.Type);
+                    gTypeList.Add(tex.ParamName);
                 }
             }
             return gTypeList;
@@ -240,7 +241,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
             {
                 foreach (var tex in mat.Textures)
                 {
-                    switch (tex.Type)
+                    switch (tex.ParamName)
                     {
                         case "g_Diffuse":
                             {
@@ -382,7 +383,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
             {
                 foreach (var tex in mat.Textures)
                 {
-                    if (tex.Type == gType)
+                    if (tex.ParamName == gType)
                     {
                         tex.Path = tex.Path.Replace(old_texture, new_texture);
                     }

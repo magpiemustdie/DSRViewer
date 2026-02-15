@@ -526,9 +526,10 @@ namespace DSRViewer.FileHelper
 
                 var tpfBytes = tpf.Write();
 
-                var dcxType = DCX.Type.DCX_DFLT_10000_24_9;
+                
+                var dcxType = new DCX.DcxDfltCompressionInfo(0);
                 var compressedTpf = DCX.Compress(tpfBytes, dcxType);
-
+                
                 var newFileName = string.IsNullOrEmpty(operation.NewTpfDcxArchiveName)
                     ? GenerateUniqueFileName(bxf, ".tpf.dcx")
                     : operation.NewTpfDcxArchiveName;

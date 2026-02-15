@@ -33,7 +33,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\..\Desktop\SoulsFormatsNEXT-master\SoulsFormats\SoulsFormats.csproj" />
+		<ProjectReference Include="..\..\..\SoulsFormatsNEXT\SoulsFormats\SoulsFormats.csproj" />
 	</ItemGroup>
 
 </Project>

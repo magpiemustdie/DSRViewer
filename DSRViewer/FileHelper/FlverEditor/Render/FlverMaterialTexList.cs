@@ -34,7 +34,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             {
                 var texture = _textures[i];
 
-                string textureInfo = $"[{i}] {texture.Type}";
+                string textureInfo = $"[{i}] {texture.ParamName}";
                 if (!string.IsNullOrEmpty(texture.Path))
                     textureInfo += $": {texture.Path}";
 
@@ -49,10 +49,10 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 {
                     ImGui.BeginTooltip();
                     ImGui.Text($"Index: {i}");
-                    ImGui.Text($"Type: {texture.Type}");
+                    ImGui.Text($"Type: {texture.ParamName}");
                     if (!string.IsNullOrEmpty(texture.Path))
                         ImGui.Text($"Path: {texture.Path}");
-                    ImGui.Text($"Scale: X={texture.Scale.X}, Y={texture.Scale.Y}");
+                    ImGui.Text($"Scale: X={texture.TilingScale.X}, Y={texture.TilingScale.Y}");
                     ImGui.EndTooltip();
                 }
             }
@@ -82,13 +82,13 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 if (!string.IsNullOrEmpty(newPath))
                     _textures[index].Path = newPath;
                 if (!string.IsNullOrEmpty(newType))
-                    _textures[index].Type = newType;
+                    _textures[index].ParamName = newType;
             }
         }
 
         public void AddTexture(string newType)
         {
-            _textures.Add(new FLVER2.Texture(newType, "", new Vector2(1, 1), 1, true, 0, 0, 0));
+            _textures.Add(new FLVER2.Texture(newType, "", new Vector2(1, 1), FLVER2.Texture.TilingType.Repeat, FLVER2.Texture.TilingType.Repeat, 0, 0, 0));
         }
 
         public int GetSelectedIndex() => SelectedItem;

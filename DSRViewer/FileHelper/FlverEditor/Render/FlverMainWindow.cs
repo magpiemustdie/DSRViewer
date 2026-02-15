@@ -230,10 +230,10 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                             // Редактирование типа текстуры
                             if (!_isEditingTextureType)
                             {
-                                ImGui.Text($"Type: {_selectedTexture.Type}");
+                                ImGui.Text($"Type: {_selectedTexture.ParamName}");
                                 if (ImGui.Button("Edit Type"))
                                 {
-                                    _editingTextureType = _selectedTexture.Type;
+                                    _editingTextureType = _selectedTexture.ParamName;
                                     _isEditingTextureType = true;
                                 }
                             }
@@ -274,7 +274,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                                 if (ImGui.Button("Cancel##Type"))
                                 {
                                     _isEditingTextureType = false;
-                                    _editingTextureType = _selectedTexture.Type;
+                                    _editingTextureType = _selectedTexture.ParamName;
                                 }
                                 ImGui.EndGroup();
                             }
@@ -334,7 +334,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                             // Информация о текстуре
                             ImGui.Separator();
                             ImGui.Text("Texture Info:");
-                            ImGui.Text($"Scale: X={_selectedTexture.Scale.X}, Y={_selectedTexture.Scale.Y}");
+                            ImGui.Text($"Scale: X={_selectedTexture.TilingScale.X}, Y={_selectedTexture.TilingScale.Y}");
                         }
                     }
                     ImGui.EndChild();
@@ -513,9 +513,9 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             _isEditingTexturePath = false;
             _isEditingTextureType = false;
             _editingTexturePath = texture.Path ?? "";
-            _editingTextureType = texture.Type;
+            _editingTextureType = texture.ParamName;
 
-            Console.WriteLine($"Selected texture [{index}]: {texture.Type} - {texture.Path}");
+            Console.WriteLine($"Selected texture [{index}]: {texture.ParamName} - {texture.Path}");
         }
 
         private void ApplyMTDEdit()
@@ -550,7 +550,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             {
                 int textureIndex = _flverTextureList.GetSelectedIndex();
                 _flverTextureList.UpdateTexture(textureIndex, null, _editingTextureType);
-                _selectedTexture.Type = _editingTextureType;
+                _selectedTexture.ParamName = _editingTextureType;
                 _isEditingTextureType = false;
 
                 Console.WriteLine($"Updated texture type to: {_editingTextureType}");
