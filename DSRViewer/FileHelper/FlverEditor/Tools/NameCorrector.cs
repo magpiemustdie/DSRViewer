@@ -57,7 +57,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                             GetObject = true,
                             WriteObject = true,
                             UseFlverDelegate = true,
-                            AdditionalFlverProcessing = (flver, realPath, path) =>
+                            AdditionalFlverProcessing = (flver, realPath, path, errorLogs) =>
                             {
                                 Console.WriteLine($"Lowcase fix delegate -> rp: {realPath} P: {path}");
                                 List<FLVER2.Material> flver_materials = flver.Materials;
@@ -83,7 +83,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                             GetObject = true,
                             WriteObject = true,
                             UseFlverDelegate = true,
-                            AdditionalFlverProcessing = (flver, realPath, path) =>
+                            AdditionalFlverProcessing = (flver, realPath, path, errorLogs) =>
                             {
                                 Console.WriteLine($"Find errors delegate -> rp: {realPath} p: {path}");
                                 List<FLVER2.Material> flver_materials = flver.Materials;
@@ -128,7 +128,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                     {
                         WriteObject = true,
                         UseFlverDelegate = true,
-                        AdditionalFlverProcessing = (flver, realPath, path) =>
+                        AdditionalFlverProcessing = (flver, realPath, path, errorLogs) =>
                         {
                             Console.WriteLine($"Replace name delegate -> rp: {realPath} P: {path}");
                             List<FLVER2.Material> flver_materials = flver.Materials;

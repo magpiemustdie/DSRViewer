@@ -27,7 +27,7 @@ namespace DSRViewer.Core.WindowsManager
         List<FMW> _flverEditorWindows = new();
         List<MTDWindow> _mtdEditorWindows = new();
         List<TransferFilesWindow> _transferFilesWindows = new();
-
+        List<CutsceneEditor> _cutsceneWindows = new();
 
         GraphicsDevice _gd;
         ImGuiController _controller;
@@ -44,6 +44,7 @@ namespace DSRViewer.Core.WindowsManager
             ViewFlverEditorWindows();
             ViewMTDEditorWindows();
             ViewTransferWindows();
+            ViewCutsceneWindows();
         }
 
         private void ViewMainMenubar()
@@ -91,6 +92,16 @@ namespace DSRViewer.Core.WindowsManager
                     ImGui.EndMenu();
                 }
 
+                if (ImGui.BeginMenu("New Remo editor..."))
+                {
+                    if (ImGui.MenuItem("Create..."))
+                    {
+                        CutsceneEditor cutsceneWindow = new($"Cutscene editor_{_cutsceneWindows.Count + 1}", true);
+                        _cutsceneWindows.Add(cutsceneWindow);
+                    }
+                    ImGui.EndMenu();
+                }
+
             }
             ImGui.EndMainMenuBar();
         }
@@ -125,8 +136,13 @@ namespace DSRViewer.Core.WindowsManager
                 window.Render();
             }
         }
-
-        
+        private void ViewCutsceneWindows()
+        {
+            foreach (var window in _cutsceneWindows)
+            {
+                window.Render();
+            }
+        }
     }
 }
 

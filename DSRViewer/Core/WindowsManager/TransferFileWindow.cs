@@ -179,7 +179,7 @@ namespace DSRViewer.Core.WindowsManager
                         }
 
                         if (ImGui.IsItemHovered())
-                            ImGui.SetTooltip($"Full path: {file.Name}");
+                            ImGui.SetTooltip($"Full name: {file.Name}");
                     }
                     ImGui.TreePop();
                 }
@@ -215,7 +215,6 @@ namespace DSRViewer.Core.WindowsManager
             return items;
         }
 
-        // Заглушка переноса файла – здесь необходимо подключить реальную логику экспорта/импорта
         private void TransferFile(FileItem source, FileItem target)
         {
             try
@@ -268,9 +267,10 @@ namespace DSRViewer.Core.WindowsManager
             {
                 BinderFile file => file.Bytes,
                 TPF.Texture texture => texture.Bytes,
-                FLVER2 flver => flver.Write(),    // Write() возвращает byte[]
+                FLVER2 flver => flver.Write(),
                 TPF tpf => tpf.Write(),
-                BND bnd => bnd.Write()
+                BND bnd => bnd.Write(),
+                byte[] => (byte[])obj
             };
         }
     }

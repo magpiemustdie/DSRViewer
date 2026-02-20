@@ -1,10 +1,12 @@
-﻿using System;
+﻿using DSRViewer.FileHelper.FileExplorer.DDSHelper;
+using Org.BouncyCastle.Utilities;
+using SoulsFormats;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
-using SoulsFormats;
-using DSRViewer.FileHelper.FileExplorer.DDSHelper;
-using System.Diagnostics;
+using Vortice.Direct3D11;
 
 namespace DSRViewer.FileHelper
 {
@@ -64,7 +66,16 @@ namespace DSRViewer.FileHelper
         private void ProcessFileGroup(string filePath, List<int[]> indicesList, FileOperation operation)
         {
             _currentRealPath = filePath;
-            Console.WriteLine(_currentRealPath);
+            Console.WriteLine($"Processing file group: {filePath}");
+
+            // Выводим все виртуальные пути, которые будут обработаны
+            foreach (var indices in indicesList)
+            {
+                if (indices.Length == 0)
+                    Console.WriteLine($"  Virtual path: {filePath}");
+                else
+                    Console.WriteLine($"  Virtual path: {filePath}|{string.Join("|", indices)}");
+            }
 
             if (IsBnd(filePath))
                 ProcessBnd(filePath, indicesList, operation);
@@ -117,7 +128,7 @@ namespace DSRViewer.FileHelper
             if (IsFlvData(file.Bytes))
             {
                 Console.WriteLine("Processing FLVER data");
-                ProcessFlverData(file, operation);
+                ProcessFlverData(file, [[]], operation);
             }
             else if (IsTpfData(file.Bytes))
             {
@@ -242,7 +253,7 @@ namespace DSRViewer.FileHelper
         {
             foreach (var indices in indicesList)
             {
-                if (indices.Length == 0)
+                if (indicesList.Any(indices => indices.Length == 0))
                 {
                     // Операции на самом TPF
                     if (operation.GetObject) _mainObject = tpf;
@@ -420,11 +431,24 @@ namespace DSRViewer.FileHelper
             // Операции на самом файле
             if (indicesList.Any(indices => indices.Length == 0))
             {
-                if (operation.GetObject) _mainObject = flver;
-                if (operation.ReplaceObject) flver = FLVER2.Read(operation.NewObjectBytes);
-                if (operation.UseFlverDelegate)
-                    operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, path);
-
+                if (operation.GetObject)
+                    GetFlverSafe(flver, path);
+                if (operation.ReplaceObject)
+                {
+                    try
+                    {
+                        var temp = flver.Write();
+                        Console.WriteLine($"Read normal flver {path}");
+                        flver = FLVER2.Read(operation.NewObjectBytes);
+                    }
+                    catch 
+                    {
+                        Console.WriteLine($"Broken flver {path}");
+                        flver = FLVER2.Read(operation.NewObjectBytes);
+                        File.WriteAllBytes(path, operation.NewObjectBytes);
+                    }
+                }
+                
                 // Переименование файла на диске
                 if (operation.RenameObject && !string.IsNullOrEmpty(operation.NewObjectName))
                 {
@@ -438,6 +462,10 @@ namespace DSRViewer.FileHelper
                     }
                 }
 
+                if (operation.UseFlverDelegate)
+
+                    operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, path, _errorLogs);
+
                 // Удаление файла (осторожно!)
                 if (operation.RemoveObject)
                 {
@@ -445,31 +473,53 @@ namespace DSRViewer.FileHelper
                     Console.WriteLine($"Deleted FLVER file {path}");
                     return; // файл удалён, запись не нужна
                 }
+
+                if (operation.WriteObject)
+                {
+                    byte[] original = File.ReadAllBytes(path);
+                    WriteFlverSafe(flver, path, original);
+                }
             }
 
-            if (operation.WriteObject)
-            {
-                byte[] original = File.ReadAllBytes(path);
-                WriteFlverSafe(flver, path, original);
-            }
+            
         }
 
-        private void ProcessFlverData(BinderFile file, FileOperation operation)
+        private void ProcessFlverData(BinderFile file, List<int[]> indicesList, FileOperation operation)
         {
             Console.WriteLine($"Processing FLVER file {file.Name}");
             var flver = FLVER2.Read(file.Bytes);
+            if (indicesList.Any(indices => indices.Length == 0))
+            {
 
-            if (operation.GetObject) _mainObject = flver;
-            if (operation.ReplaceObject) flver = FLVER2.Read(operation.NewObjectBytes);
-            if (operation.UseFlverDelegate)
-                operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, file.Name);
+                if (operation.GetObject)
+                    GetFlverSafe(flver, file);
 
-            // Переименование файла внутри контейнера
-            if (operation.RenameObject)
-                file.Name = operation.NewObjectName;
+                if (operation.ReplaceObject)
+                {
+                    try
+                    {
+                        var temp = flver.Write();
+                        Console.WriteLine($"Read normal flver {file.Name}");
+                        flver = FLVER2.Read(operation.NewObjectBytes);
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Broken flver {file.Name}");
+                        flver = FLVER2.Read(operation.NewObjectBytes);
+                        file.Bytes = operation.NewObjectBytes;
+                    }
+                }
 
-            if (operation.WriteObject)
-                file.Bytes = WriteFlverSafe(flver, file.Bytes, file.Name);
+                // Переименование файла внутри контейнера
+                if (operation.RenameObject)
+                    file.Name = operation.NewObjectName;
+
+                if (operation.UseFlverDelegate)
+                    operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, file.Name, _errorLogs);
+
+                if (operation.WriteObject)
+                    file.Bytes = WriteFlverSafe(flver, file.Bytes, file.Name);
+            }
         }
 
         // ---------- DCX ----------
@@ -578,6 +628,31 @@ namespace DSRViewer.FileHelper
             };
         }
 
+        private void GetFlverSafe(FLVER2 flver, BinderFile file)
+        {
+            try
+            {
+                byte[] temp = flver.Write();
+                _mainObject = flver;
+            }
+            catch
+            {
+                _mainObject = file;
+            }
+        }
+        private void GetFlverSafe(FLVER2 flver, string path)
+        {
+            try
+            {
+                byte[] temp = flver.Write();
+                _mainObject = flver;
+            }
+            catch
+            {
+                _mainObject = File.ReadAllBytes(path);
+            }
+        }
+
         private byte[] WriteFlverSafe(FLVER2 flver, byte[] original, string context)
         {
             try
@@ -586,9 +661,10 @@ namespace DSRViewer.FileHelper
             }
             catch (Exception ex)
             {
-                var errorMsg = $"Failed to write FLVER (context: {context}): {ex.Message}";
+                var errorMsg = $"Failed to write FLVER to {context}: {ex.Message}";
                 Console.WriteLine(errorMsg);
                 _errorLogs.Add(errorMsg);
+                Console.WriteLine("Try to write original bytes");
                 return original;
             }
         }
@@ -598,12 +674,15 @@ namespace DSRViewer.FileHelper
             try
             {
                 flver.Write(path);
+                Console.WriteLine($"Successfully saved(?) changes to: {path}");
+
             }
             catch (Exception ex)
             {
                 var errorMsg = $"Failed to write FLVER to {path}: {ex.Message}";
                 Console.WriteLine(errorMsg);
                 _errorLogs.Add(errorMsg);
+                Console.WriteLine("Try to write original bytes");
                 File.WriteAllBytes(path, original);
             }
         }
@@ -668,24 +747,8 @@ namespace DSRViewer.FileHelper
         public string NewObjectName { get; set; } = "";
         public byte[] NewObjectBytes { get; set; } = [];   // для AddObject и ReplaceObject
         public bool AddObject { get; set; }
-
-        // Для обратной совместимости (замена всего объекта)
-        //public byte[] NewBytes { get; set; } = [];
-
-        // FLVER
-        //public bool WriteFlver { get; set; }
-        //public bool ReplaceFlver { get; set; }
-        //public FLVER2 NewFlver { get; set; } = new();
-
-        // TPF (специфичные)
-        //public bool AddTexture { get; set; }
-        //public bool RemoveTexture { get; set; }
-        //public bool ReplaceTexture { get; set; }
-        //public bool RenameTexture { get; set; }
         public bool ChangeTextureFormat { get; set; }
-        //public byte[] NewTextureBytes { get; set; } = [];
         public byte NewTextureFormat { get; set; }
-        //public string NewTextureName { get; set; } = "";
 
         // BXF (специфичные)
         public bool AddTpfDcx { get; set; }
@@ -695,7 +758,7 @@ namespace DSRViewer.FileHelper
         // Делегаты
         public bool UseFlverDelegate { get; set; }
         public bool UseTexDelegate { get; set; }
-        public Action<FLVER2, string, string> AdditionalFlverProcessing { get; set; }
+        public Action<FLVER2, string, string, List<string>> AdditionalFlverProcessing { get; set; }
         public Action<TPF.Texture, string> AdditionalTexProcessing { get; set; }
     }
 }

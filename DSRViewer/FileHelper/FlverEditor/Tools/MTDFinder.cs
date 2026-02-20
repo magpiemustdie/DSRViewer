@@ -47,7 +47,24 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                                         GetObject = true
                                     };
                                     binder.ProcessPaths(new[] { file.VirtualPath }, operation);
-                                    FLVER2 flver_main = (FLVER2)binder.GetObject();
+
+                                    FLVER2 flver_main = new();
+
+                                    if (binder.GetObject() is FLVER2)
+                                    {
+                                        flver_main = (FLVER2)binder.GetObject();
+                                    }
+                                    else if (binder.GetObject() is BinderFile)
+                                    {
+                                        var tempFile = (BinderFile)binder.GetObject();
+                                        flver_main = FLVER2.Read(tempFile.Bytes);
+                                    }
+                                    else if (binder.GetObject() is byte[])
+                                    {
+                                        byte[] tempBytes = (byte[])binder.GetObject();
+                                        flver_main = FLVER2.Read(tempBytes);
+                                    }
+
                                     List<FLVER2.Material> flver_materials = flver_main.Materials;
 
                                     if (_flverTools.MTDFinder(flver_materials, _mtdNameFinder))
@@ -86,7 +103,24 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                                         GetObject = true
                                     };
                                     binder.ProcessPaths(new[] { file.VirtualPath }, operation);
-                                    FLVER2 flver_main = (FLVER2)binder.GetObject();
+
+                                    FLVER2 flver_main = new();
+
+                                    if (binder.GetObject() is FLVER2)
+                                    {
+                                        flver_main = (FLVER2)binder.GetObject();
+                                    }
+                                    else if (binder.GetObject() is BinderFile)
+                                    {
+                                        var tempFile = (BinderFile)binder.GetObject();
+                                        flver_main = FLVER2.Read(tempFile.Bytes);
+                                    }
+                                    else if (binder.GetObject() is byte[])
+                                    {
+                                        byte[] tempBytes = (byte[])binder.GetObject();
+                                        flver_main = FLVER2.Read(tempBytes);
+                                    }
+
                                     List<FLVER2.Material> flver_materials = flver_main.Materials;
 
                                     _flverTools.MTDFinderAll(flver_materials, mtdList);

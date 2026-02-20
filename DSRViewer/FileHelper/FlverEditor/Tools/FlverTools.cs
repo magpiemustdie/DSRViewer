@@ -51,15 +51,25 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
 
                     flver.Materials[i].Textures = materials[i].Textures;
                 }
-                var binder = new FileBinders();
-                var operation = new FileOperation
+
+                try
                 {
-                    WriteObject = true,
-                    ReplaceObject = true,
-                    NewObjectBytes = flver.Write()
-                };
-                binder.ProcessPaths(new[] { virtualPath }, operation);
-                Console.WriteLine("Write Done");
+                    var temp = flver.Write();
+                    var binder = new FileBinders();
+                    var operation = new FileOperation
+                    {
+                        WriteObject = true,
+                        ReplaceObject = true,
+                        NewObjectBytes = temp
+                    };
+                    binder.ProcessPaths(new[] { virtualPath }, operation);
+                    Console.WriteLine("Write Done");
+                }
+                catch
+                {
+                    Console.WriteLine($"Broken flver {virtualPath}");
+                }
+                
             }
         }
 

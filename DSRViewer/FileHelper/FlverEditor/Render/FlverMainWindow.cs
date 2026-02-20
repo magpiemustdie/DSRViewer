@@ -1,4 +1,15 @@
-﻿using System;
+﻿using DSRViewer.Core;
+using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
+using DSRViewer.FileHelper.FlverEditor.Tools;
+using DSRViewer.FileHelper.FlverEditor.Tools.FlverTexFinder;
+using DSRViewer.FileHelper.flverTools.Tools;
+using DSRViewer.FileHelper.MTDEditor;
+using DSRViewer.FileHelper.MTDEditor.Render;
+using DSRViewer.ImGuiHelper;
+using ImGuiNET;
+using SharpGen.Runtime.Win32;
+using SoulsFormats;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -6,17 +17,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using DSRViewer.FileHelper.MTDEditor;
-using DSRViewer.ImGuiHelper;
-using ImGuiNET;
-using SoulsFormats;
 using Veldrid;
-using DSRViewer.FileHelper.FlverEditor.Tools;
-using DSRViewer.FileHelper.MTDEditor.Render;
-using DSRViewer.FileHelper.flverTools.Tools;
-using DSRViewer.FileHelper.FlverEditor.Tools.FlverTexFinder;
-using DSRViewer.Core;
-using DSRViewer.FileHelper.FileExplorer.TreeBuilder;
 
 namespace DSRViewer.FileHelper.FlverEditor.Render
 {
@@ -397,7 +398,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             var operation = new FileOperation
             {
                 UseFlverDelegate = true,
-                AdditionalFlverProcessing = (flver, realPath, path) =>
+                AdditionalFlverProcessing = (flver, realPath, path, errorLogs) =>
                 {
                     
                     List<FLVER2.Material> flver_materials = flver.Materials;
@@ -406,8 +407,10 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                         var bytes = flver.Write();
                     }
                     catch
-                    {
-                        Console.WriteLine($"Find save errors -> rp: {realPath} p: {path}");
+                    { 
+                        var errorMsg = $"Find save errors -> rp: {realPath} p: {path}";
+                        Console.WriteLine(errorMsg);
+                        errorLogs.Add(errorMsg);
                     }
                 }
             };
@@ -573,7 +576,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
             if (fileNode == null)
                 return;
 
-            if (fileNode.VirtualPath.Split("|").Last() != null) //wut??
+            if (fileNode.VirtualPath.Split("|").Last() != null)
             {
                 var binder = new FileBinders();
                 var operation = new FileOperation
@@ -582,7 +585,22 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                 };
                 binder.ProcessPaths(new[] { fileNode.VirtualPath }, operation);
 
-                _currentFlver = (FLVER2)binder.GetObject();
+                if (binder.GetObject() is FLVER2)
+                {
+                    _currentFlver = (FLVER2)binder.GetObject();
+                }
+                else if (binder.GetObject() is BinderFile)
+                {
+                    var tempFile = (BinderFile)binder.GetObject();
+                    _currentFlver = FLVER2.Read(tempFile.Bytes);
+                }
+                else if (binder.GetObject() is byte[])
+                {
+                    byte[] tempBytes = (byte[])binder.GetObject();
+                    _currentFlver = FLVER2.Read(tempBytes);
+                }
+
+
                 _flverMaterialList.UpdateList(_currentFlver.Materials);
                 _flverTextureList.ClearList();
                 _selectedMaterial = null;
@@ -636,8 +654,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Render
                     ReplaceObject = true,
                     NewObjectBytes = _currentFlver.Write()
                 };
-                binder.ProcessPaths(new[] { filePath }, operation);
-                Console.WriteLine($"Successfully saved changes to: {filePath}");
+                binder.ProcessPaths(new[] { filePath }, operation);            
             }
             catch (Exception ex)
             {

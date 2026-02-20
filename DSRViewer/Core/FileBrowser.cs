@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace DSRViewer.FileHelper
+namespace DSRViewer.Core
 {
     public class FileBrowser
     {
@@ -35,15 +35,15 @@ namespace DSRViewer.FileHelper
             return file;
         }
 
-        public string SetFilePath()
+        public string SetFilePath(string title, string filter)
         {
             file = "";
             var thread = new Thread(() =>
             {
                 using (var fileDialog = new OpenFileDialog()) //Windows dialog
                 {
-                    fileDialog.Title = "Open flver";
-                    fileDialog.Filter = "Flver files (*.flver)|*.flver|Flver files (*.flver.dcx)|*.flver.dcx|All (*.*)|*.*";
+                    fileDialog.Title = title;
+                    fileDialog.Filter = filter;
                     if (fileDialog.ShowDialog() == DialogResult.OK)
                     {
                         file = fileDialog.FileName;

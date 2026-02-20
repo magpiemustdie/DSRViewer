@@ -94,7 +94,22 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools.FlverTexFinder
                         GetObject = true
                     };
                     binder.ProcessPaths(new[] { file.VirtualPath }, operation);
-                    FLVER2 flver_main = (FLVER2)binder.GetObject();
+
+                    FLVER2 flver_main = new();
+
+                    if (binder.GetObject() is FLVER2)
+                        flver_main = (FLVER2)binder.GetObject();
+
+                    else if (binder.GetObject() is BinderFile)
+                    {
+                        var tempFile = (BinderFile)binder.GetObject();
+                        flver_main = FLVER2.Read(tempFile.Bytes);
+                    }
+                    else if (binder.GetObject() is byte[])
+                    {
+                        var tempByte = (byte[])binder.GetObject();
+                        flver_main = FLVER2.Read(tempByte);
+                    }
 
                     List<FLVER2.Material> flver_materials = flver_main.Materials;
 

@@ -249,19 +249,17 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                 {
                     WriteObject = true,
                     ReplaceObject = true,
+                    RenameObject = true,
                     NewObjectBytes = newBytes
                 };
 
                 // Если выбран вариант «имя из нового файла» – добавляем переименование
                 if (_useTargetName)
                 {
-                    operation.RenameObject = true;
                     operation.NewObjectName = selectedNode.Name;
-                    
                 }
                 else
                 {
-                    operation.RenameObject = true;
                     operation.NewObjectName = Path.GetFileName(_replaceFilePath);
                 }
 
