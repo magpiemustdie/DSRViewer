@@ -26,7 +26,7 @@ namespace DSRViewer.FileHelper.flverTools.Tools
             _windowName = windowName;
             _showWindow = showWindow;
         }
-        public void Render(List<FileNode> flverfilelist, List<MTDShortDetails> _mtdList)
+        public void Render(List<FileNode> flverfilelist, List<MTDShortDetails> mtdList)
         {
             if (_showWindow)
             {
@@ -39,12 +39,18 @@ namespace DSRViewer.FileHelper.flverTools.Tools
                         ImGui.SetNextItemWidth(300);
                         ImGui.InputText($"mtd_finder", ref mtdnamefinder, 100);
                         ImGui.SetNextItemWidth(300);
-                        ImGui.InputText($"mtd_replacer", ref mtdnewname, 100);
+                        ImGui.InputText($"mtd_new", ref mtdnewname, 100);
                         ImGui.SetNextItemWidth(300);
                         ImGui.InputText($"new_height", ref heightnewname, 100);
 
+                        ShowMaterial(mtdList);
+
                         if (ImGui.Button("Replace mtd (full)"))
                         {
+                            List<string> fileList = flverfilelist
+                                .Select(fileNode => fileNode.VirtualPath)
+                                .ToList();
+
                             // Создаем имя файла лога с временной меткой
                             string logFileName = $"mtd_replacement_{DateTime.Now:yyyyMMdd_HHmmss}.log";
                             string logFilePath = Path.Combine(logFileName);
@@ -59,72 +65,60 @@ namespace DSRViewer.FileHelper.flverTools.Tools
                                 int failCount = 0;
                                 int skippedCount = 0;
 
-                                foreach (var file in flverfilelist)
+                                var binder = new FileBinders();
+                                var operation = new FileOperation
                                 {
-                                    try
+                                    WriteObject = true,
+                                    UseFlverDelegate = true,
+                                    AdditionalFlverProcessing = (flver, virtualPath, name, errorLogs) =>
                                     {
-                                        logWriter.WriteLine($"Processing: {file.VirtualPath}");
-                                        logWriter.WriteLine($"File: {file.Name}");
-
-                                        var binder = new FileBinders();
-                                        var operation = new FileOperation
+                                        try
                                         {
-                                            GetObject = true
-                                        };
-                                        binder.ProcessPaths(new[] { file.VirtualPath }, operation);
+                                            Console.WriteLine($"MTD replace delegate -> rp: {virtualPath} n: {name}");
+                                            List<FLVER2.Material> flver_materials = flver.Materials;
 
-                                        FLVER2 flver_main = new();
-
-                                        if (binder.GetObject() is FLVER2)
-                                            flver_main = (FLVER2)binder.GetObject();
-
-                                        else if (binder.GetObject() is BinderFile)
-                                        {
-                                            var tempFile = (BinderFile)binder.GetObject();
-                                            flver_main = FLVER2.Read(tempFile.Bytes);
-                                        }
-
-                                        List<FLVER2.Material> flver_materials = flver_main.Materials;
-
-                                        if (_flverTools.TexFinder(flver_materials, texturename))
-                                        {
-                                            logWriter.WriteLine($"  Texture '{texturename}' found");
-
-                                            if (_flverTools.MTDFinder(flver_materials, texturename, mtdnamefinder))
+                                            if (_flverTools.TexFinder(flver_materials, texturename))
                                             {
-                                                logWriter.WriteLine($"  MTD '{mtdnamefinder}' found");
-                                                Console.WriteLine($"Try to replace MTD (full): {file.VirtualPath}");
-                                                logWriter.WriteLine($"  Attempting MTD replacement...");
+                                                logWriter.WriteLine($"  Texture '{texturename}' found");
 
-                                                flver_materials = _flverTools.MTDReplacerHeight(_mtdList, flver_materials, texturename, mtdnamefinder, mtdnewname, heightnewname);
-                                                _flverTools.FlverWriter(flver_main, flver_materials, file.VirtualPath);
+                                                if (_flverTools.MTDFinder(flver_materials, texturename, mtdnamefinder))
+                                                {
+                                                    logWriter.WriteLine($"  MTD '{mtdnamefinder}' found");
+                                                    Console.WriteLine($"Try to replace MTD (full): {virtualPath}");
+                                                    logWriter.WriteLine($"  Attempting MTD replacement...");
 
-                                                Console.WriteLine($"Write: {file.Name}");
-                                                logWriter.WriteLine($"  SUCCESS: MTD replaced with '{mtdnewname}', height map '{heightnewname}'");
-                                                successCount++;
+                                                    flver_materials = _flverTools.MTDReplacerHeight(mtdList, flver_materials, texturename, mtdnamefinder, mtdnewname, heightnewname);
+                                                    _flverTools.FlverMTDWriter(flver, flver_materials, virtualPath);
+
+                                                    Console.WriteLine($"Write: {virtualPath}");
+                                                    logWriter.WriteLine($"  SUCCESS: MTD replaced with '{mtdnewname}', height map '{heightnewname}'");
+                                                    successCount++;
+                                                }
+                                                else
+                                                {
+                                                    logWriter.WriteLine($"  SKIPPED: MTD '{mtdnamefinder}' not found for texture '{texturename}'");
+                                                    skippedCount++;
+                                                }
                                             }
                                             else
                                             {
-                                                logWriter.WriteLine($"  SKIPPED: MTD '{mtdnamefinder}' not found for texture '{texturename}'");
+                                                logWriter.WriteLine($"  SKIPPED: Texture '{texturename}' not found");
                                                 skippedCount++;
                                             }
                                         }
-                                        else
+                                        catch (Exception ex)
                                         {
-                                            logWriter.WriteLine($"  SKIPPED: Texture '{texturename}' not found");
-                                            skippedCount++;
+                                            Console.WriteLine($"Fail: {virtualPath}");
+                                            logWriter.WriteLine($"  FAILED: {ex.Message}");
+                                            logWriter.WriteLine($"  Stack Trace: {ex.StackTrace}");
+                                            failCount++;
                                         }
                                     }
-                                    catch (Exception ex)
-                                    {
-                                        Console.WriteLine($"Fail: {file.Name}");
-                                        logWriter.WriteLine($"  FAILED: {ex.Message}");
-                                        logWriter.WriteLine($"  Stack Trace: {ex.StackTrace}");
-                                        failCount++;
-                                    }
+                                };
 
-                                    logWriter.WriteLine(); // Пустая строка для разделения записей
-                                }
+                                binder.ProcessPaths(fileList, operation);
+
+                                logWriter.WriteLine(); // Пустая строка для разделения записей
 
                                 // Записываем итоговую статистику
                                 logWriter.WriteLine("=========================================");
@@ -134,104 +128,85 @@ namespace DSRViewer.FileHelper.flverTools.Tools
                                 logWriter.WriteLine($"  Failed: {failCount}");
                                 logWriter.WriteLine($"  Skipped: {skippedCount}");
                                 logWriter.WriteLine($"  Log file saved to: {logFilePath}");
+
+                                Console.WriteLine($"MTD replacement completed. Log saved to: {logFilePath}");
                             }
-
-                            // Также выводим итог в консоль
-                            Console.WriteLine($"MTD replacement completed. Log saved to: {logFilePath}");
                         }
-
 
                         if (ImGui.Button("Replace mtd (only name)"))
                         {
+                            List<string> fileList = flverfilelist
+                                .Select(fileNode => fileNode.VirtualPath)
+                                .ToList();
+
                             // Создаем имя файла лога с временной меткой
-                            string logFileName = $"mtd_name_replacement_{DateTime.Now:yyyyMMdd_HHmmss}.log";
-                            string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, logFileName);
+                            string logFileName = $"mtd_replacement_{DateTime.Now:yyyyMMdd_HHmmss}.log";
+                            string logFilePath = Path.Combine(logFileName);
 
                             using (StreamWriter logWriter = new StreamWriter(logFilePath, append: true))
                             {
-                                logWriter.WriteLine($"MTD Name Replacement Log - {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                                logWriter.WriteLine($"MTD Replacement Log - {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                                 logWriter.WriteLine("=========================================");
-                                logWriter.WriteLine($"Search texture: {texturename}");
-                                logWriter.WriteLine($"Find MTD: {mtdnamefinder}");
-                                logWriter.WriteLine($"Replace with MTD: {mtdnewname}");
                                 logWriter.WriteLine();
 
                                 int successCount = 0;
                                 int failCount = 0;
                                 int skippedCount = 0;
 
-                                foreach (var file in flverfilelist)
+                                var binder = new FileBinders();
+                                var operation = new FileOperation
                                 {
-                                    try
+                                    WriteObject = true,
+                                    UseFlverDelegate = true,
+                                    AdditionalFlverProcessing = (flver, virtualPath, name, errorLogs) =>
                                     {
-                                        logWriter.WriteLine($"Processing: {file.VirtualPath}");
-                                        logWriter.WriteLine($"File: {file.Name}");
-
-                                        var binder = new FileBinders();
-                                        var operation = new FileOperation
+                                        try
                                         {
-                                            GetObject = true
-                                        };
-                                        binder.ProcessPaths(new[] { file.VirtualPath }, operation);
+                                            Console.WriteLine($"MTD replace delegate -> rp: {virtualPath} n: {name}");
+                                            List<FLVER2.Material> flver_materials = flver.Materials;
 
-                                        FLVER2 flver_main = new();
-
-                                        if (binder.GetObject() is FLVER2)
-                                        {
-                                            flver_main = (FLVER2)binder.GetObject();
-                                        }
-                                        else if (binder.GetObject() is BinderFile)
-                                        {
-                                            var tempFile = (BinderFile)binder.GetObject();
-                                            flver_main = FLVER2.Read(tempFile.Bytes);
-                                        }
-                                        else if (binder.GetObject() is byte[])
-                                        {
-                                            byte[] tempBytes = (byte[])binder.GetObject();
-                                            flver_main = FLVER2.Read(tempBytes);
-                                        }
-
-                                        List<FLVER2.Material> flver_materials = flver_main.Materials;
-
-                                        if (_flverTools.TexFinder(flver_materials, texturename))
-                                        {
-                                            logWriter.WriteLine($"  Texture '{texturename}' found");
-
-                                            if (_flverTools.MTDFinder(flver_materials, texturename, mtdnamefinder))
+                                            if (_flverTools.TexFinder(flver_materials, texturename))
                                             {
-                                                logWriter.WriteLine($"  MTD '{mtdnamefinder}' found");
-                                                Console.WriteLine($"Try to replace MTD: {file.VirtualPath}");
-                                                logWriter.WriteLine($"  Attempting MTD name replacement...");
+                                                logWriter.WriteLine($"  Texture '{texturename}' found");
 
-                                                _flverTools.MTDReplacer(flver_materials, texturename, mtdnamefinder, mtdnewname);
-                                                _flverTools.FlverWriter(flver_main, flver_materials, file.VirtualPath);
+                                                if (_flverTools.MTDFinder(flver_materials, texturename, mtdnamefinder))
+                                                {
+                                                    logWriter.WriteLine($"  MTD '{mtdnamefinder}' found");
+                                                    Console.WriteLine($"Try to replace MTD: {virtualPath}");
+                                                    logWriter.WriteLine($"  Attempting MTD name replacement...");
 
-                                                Console.WriteLine($"Write: {file.Name}");
-                                                logWriter.WriteLine($"  SUCCESS: MTD name replaced with '{mtdnewname}'");
-                                                successCount++;
+                                                    _flverTools.MTDReplacer(flver_materials, texturename, mtdnamefinder, mtdnewname);
+                                                    _flverTools.FlverMTDWriter(flver, flver_materials, virtualPath);
+
+                                                    Console.WriteLine($"Write: {virtualPath}");
+                                                    logWriter.WriteLine($"  SUCCESS: MTD name replaced with '{mtdnewname}'");
+                                                    successCount++;
+                                                }
+                                                else
+                                                {
+                                                    logWriter.WriteLine($"  SKIPPED: MTD '{mtdnamefinder}' not found for texture '{texturename}'");
+                                                    skippedCount++;
+                                                }
                                             }
                                             else
                                             {
-                                                logWriter.WriteLine($"  SKIPPED: MTD '{mtdnamefinder}' not found for texture '{texturename}'");
+                                                logWriter.WriteLine($"  SKIPPED: Texture '{texturename}' not found");
                                                 skippedCount++;
                                             }
                                         }
-                                        else
+                                        catch (Exception ex)
                                         {
-                                            logWriter.WriteLine($"  SKIPPED: Texture '{texturename}' not found");
-                                            skippedCount++;
+                                            Console.WriteLine($"Fail: {virtualPath}");
+                                            logWriter.WriteLine($"  FAILED: {ex.Message}");
+                                            logWriter.WriteLine($"  Stack Trace: {ex.StackTrace}");
+                                            failCount++;
                                         }
                                     }
-                                    catch (Exception ex)
-                                    {
-                                        Console.WriteLine($"Fail: {file.Name}");
-                                        logWriter.WriteLine($"  FAILED: {ex.Message}");
-                                        logWriter.WriteLine($"  Stack Trace: {ex.StackTrace}");
-                                        failCount++;
-                                    }
+                                };
 
-                                    logWriter.WriteLine(); // Пустая строка
-                                }
+                                binder.ProcessPaths(fileList, operation);
+
+                                logWriter.WriteLine(); // Пустая строка для разделения записей
 
                                 // Записываем итоговую статистику
                                 logWriter.WriteLine("=========================================");
@@ -241,15 +216,44 @@ namespace DSRViewer.FileHelper.flverTools.Tools
                                 logWriter.WriteLine($"  Failed: {failCount}");
                                 logWriter.WriteLine($"  Skipped: {skippedCount}");
                                 logWriter.WriteLine($"  Log file saved to: {logFilePath}");
-                            }
 
-                            // Также выводим итог в консоль
-                            Console.WriteLine($"MTD name replacement completed. Log saved to: {logFilePath}");
+                                Console.WriteLine($"MTD replacement completed. Log saved to: {logFilePath}");
+                            }
                         }
                     }
                     ImGui.EndChild();
                 }
                 ImGui.End();
+            }
+        }
+
+        private void ShowMaterial(List<MTDShortDetails> mtdList)
+        {
+            if (ImGui.Button("Test material"))
+            {
+                foreach (var m in mtdList)
+                {
+                    if (m.Name == mtdnamefinder)
+                    {
+                        Console.WriteLine(m.Name);
+                        foreach (var tex in m.TexType)
+                        {
+                            Console.WriteLine(tex);
+                        }
+                    }
+                }
+
+                foreach (var n in mtdList)
+                {
+                    if (n.Name == mtdnewname)
+                    {
+                        Console.WriteLine(n.Name);
+                        foreach (var tex in n.TexType)
+                        {
+                            Console.WriteLine(tex);
+                        }
+                    }
+                }
             }
         }
     }

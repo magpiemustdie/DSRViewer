@@ -6,6 +6,7 @@
 		<UseWindowsForms>true</UseWindowsForms>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<ApplicationIcon>i.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -13,6 +14,10 @@
 		<Compile Remove="FileHelper\FileProcess\FileBinders.cs" />
 		<Compile Remove="FileHelper\FileProcess\FileBindersOld.cs" />
 		<Compile Remove="Flver.WindowTools_old.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="i.ico" />
 	</ItemGroup>
 
 	<ItemGroup>

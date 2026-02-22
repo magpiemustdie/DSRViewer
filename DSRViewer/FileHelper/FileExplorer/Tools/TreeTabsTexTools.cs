@@ -263,6 +263,7 @@ namespace DSRViewer.FileHelper.FileExplorer.Tools
                     operation.NewObjectName = Path.GetFileName(_replaceFilePath);
                 }
 
+                Console.WriteLine("Start replacing...");
                 binder.ProcessPaths(new[] { selectedNode.VirtualPath }, operation);
 
                 _onInjectionComplete?.Invoke(selectedNode.VirtualPath);

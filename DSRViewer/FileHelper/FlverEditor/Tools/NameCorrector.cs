@@ -43,8 +43,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
             {
                 if (ImGui.BeginMenu("Tools"))
                 {
-                   
-
                     if (ImGui.MenuItem("Lowcase fix"))
                     {
                         List<string> fileList = flverfilelist
@@ -54,12 +52,11 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                         var binder = new FileBinders();
                         var operation = new FileOperation
                         {
-                            GetObject = true,
                             WriteObject = true,
                             UseFlverDelegate = true,
-                            AdditionalFlverProcessing = (flver, realPath, path, errorLogs) =>
+                            AdditionalFlverProcessing = (flver, realPath, name, errorLogs) =>
                             {
-                                Console.WriteLine($"Lowcase fix delegate -> rp: {realPath} P: {path}");
+                                Console.WriteLine($"Lowcase fix delegate -> rp: {realPath} n: {name}");
                                 List<FLVER2.Material> flver_materials = flver.Materials;
                                 _flverTools.TexCorrectorFinderToLower(flver_materials);
                                 _flverTools.TexCorrectorToLower(flver, flver_materials);
@@ -80,14 +77,12 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                         var binder = new FileBinders();
                         var operation = new FileOperation
                         {
-                            GetObject = true,
-                            WriteObject = true,
                             UseFlverDelegate = true,
-                            AdditionalFlverProcessing = (flver, realPath, path, errorLogs) =>
+                            AdditionalFlverProcessing = (flver, realPath, name, errorLogs) =>
                             {
-                                Console.WriteLine($"Find errors delegate -> rp: {realPath} p: {path}");
+                                Console.WriteLine($"Find errors delegate -> rp: {realPath} n: {name}");
                                 List<FLVER2.Material> flver_materials = flver.Materials;
-                                bug_List = _flverTools.TexCorrectorFinder(flver_materials, realPath, path, bug_List);
+                                bug_List = _flverTools.TexCorrectorFinder(flver_materials, realPath, name, bug_List);
                             }
                         };
 
@@ -126,11 +121,10 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                     var binder = new FileBinders();
                     var operation = new FileOperation
                     {
-                        WriteObject = true,
                         UseFlverDelegate = true,
-                        AdditionalFlverProcessing = (flver, realPath, path, errorLogs) =>
+                        AdditionalFlverProcessing = (flver, realPath, name, errorLogs) =>
                         {
-                            Console.WriteLine($"Replace name delegate -> rp: {realPath} P: {path}");
+                            Console.WriteLine($"Replace name delegate -> rp: {realPath} n: {name}");
                             List<FLVER2.Material> flver_materials = flver.Materials;
 
                             if (_flverTools.TexFinder(flver_materials, texcorname))

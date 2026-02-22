@@ -32,7 +32,7 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
         }
         */
 
-        public void FlverWriter(FLVER2 flver, List<FLVER2.Material> materials, string virtualPath) //Flver writer
+        public void FlverMTDWriter(FLVER2 flver, List<FLVER2.Material> materials, string virtualPath)
         {
             if (!(flver == null | materials == null))
             {
@@ -51,25 +51,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
 
                     flver.Materials[i].Textures = materials[i].Textures;
                 }
-
-                try
-                {
-                    var temp = flver.Write();
-                    var binder = new FileBinders();
-                    var operation = new FileOperation
-                    {
-                        WriteObject = true,
-                        ReplaceObject = true,
-                        NewObjectBytes = temp
-                    };
-                    binder.ProcessPaths(new[] { virtualPath }, operation);
-                    Console.WriteLine("Write Done");
-                }
-                catch
-                {
-                    Console.WriteLine($"Broken flver {virtualPath}");
-                }
-                
             }
         }
 

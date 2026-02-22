@@ -1,14 +1,16 @@
-﻿using System;
+﻿using DSRViewer.FileHelper;
+using DSRViewer.ImGuiHelper;
+using ImGuiNET;
+using SharpGen.Runtime.Win32;
+using SoulsFormats;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SoulsFormats;
-using ImGuiNET;
-using System.Reflection;
-using DSRViewer.FileHelper;
-using DSRViewer.ImGuiHelper;
+using Vortice.Direct3D11;
 
 namespace DSRViewer.FileHelper.FlverEditor.Tools
 {
@@ -37,101 +39,59 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                         if (ImGui.Button("Find MTD"))
                         {
                             List<string> modelList = [];
-                            foreach (var file in flverFileList)
+
+                            List<string> tempList = flverFileList.Where(node => node.VirtualPath != null)
+                            .Select(node => node.VirtualPath)
+                            .ToList();
+
+                            
+                            var binder = new FileBinders();
+                            var operation = new FileOperation
                             {
-                                try
+                                UseFlverDelegate = true,
+                                AdditionalFlverProcessing = (flver, virtualPath, name, errorLogs) =>
                                 {
-                                    var binder = new FileBinders();
-                                    var operation = new FileOperation
-                                    {
-                                        GetObject = true
-                                    };
-                                    binder.ProcessPaths(new[] { file.VirtualPath }, operation);
-
-                                    FLVER2 flver_main = new();
-
-                                    if (binder.GetObject() is FLVER2)
-                                    {
-                                        flver_main = (FLVER2)binder.GetObject();
-                                    }
-                                    else if (binder.GetObject() is BinderFile)
-                                    {
-                                        var tempFile = (BinderFile)binder.GetObject();
-                                        flver_main = FLVER2.Read(tempFile.Bytes);
-                                    }
-                                    else if (binder.GetObject() is byte[])
-                                    {
-                                        byte[] tempBytes = (byte[])binder.GetObject();
-                                        flver_main = FLVER2.Read(tempBytes);
-                                    }
-
-                                    List<FLVER2.Material> flver_materials = flver_main.Materials;
+                                    List<FLVER2.Material> flver_materials = flver.Materials;
 
                                     if (_flverTools.MTDFinder(flver_materials, _mtdNameFinder))
                                     {
-                                        modelList.Add(file.VirtualPath);
-                                        Console.WriteLine($"MTD Found -> : {file.VirtualPath}");
+                                        modelList.Add(virtualPath);
+                                        Console.WriteLine($"MTD Found -> : {virtualPath}");
                                     }
                                 }
-                                catch
-                                {
-                                    Console.WriteLine($"Fail: {file}");
-                                }
-                            }
-
-                            foreach (var file in modelList)
-                            {
-                                Console.WriteLine(file);
-                            }
+                            };
+                            binder.ProcessPaths(tempList, operation);
 
                             File.WriteAllLines("MTDs.txt", modelList);
+                        }
+
+                            
                         }
 
                         if (ImGui.Button("Find All MTD"))
                         {
                             List<string> mtdList = [];
+                            
+                            List<string> tempList = flverFileList.Where(node => node.VirtualPath != null)
+                            .Select(node => node.VirtualPath)
+                            .ToList();
 
                             Dictionary<string, int> countDictionary = [];
 
-                            foreach (var file in flverFileList)
+                        var binder = new FileBinders();
+                        var operation = new FileOperation
+                        {
+                            UseFlverDelegate = true,
+                            AdditionalFlverProcessing = (flver, virtualPath, name, errorLogs) =>
                             {
-                                try
-                                {
-                                    var binder = new FileBinders();
-                                    var operation = new FileOperation
-                                    {
-                                        GetObject = true
-                                    };
-                                    binder.ProcessPaths(new[] { file.VirtualPath }, operation);
+                                List<FLVER2.Material> flver_materials = flver.Materials;
 
-                                    FLVER2 flver_main = new();
-
-                                    if (binder.GetObject() is FLVER2)
-                                    {
-                                        flver_main = (FLVER2)binder.GetObject();
-                                    }
-                                    else if (binder.GetObject() is BinderFile)
-                                    {
-                                        var tempFile = (BinderFile)binder.GetObject();
-                                        flver_main = FLVER2.Read(tempFile.Bytes);
-                                    }
-                                    else if (binder.GetObject() is byte[])
-                                    {
-                                        byte[] tempBytes = (byte[])binder.GetObject();
-                                        flver_main = FLVER2.Read(tempBytes);
-                                    }
-
-                                    List<FLVER2.Material> flver_materials = flver_main.Materials;
-
-                                    _flverTools.MTDFinderAll(flver_materials, mtdList);
-                                }
-                                catch
-                                {
-                                    Console.WriteLine($"Fail: {file}");
-                                }
+                                _flverTools.MTDFinderAll(flver_materials, mtdList);
                             }
+                        };
+                        binder.ProcessPaths(tempList, operation);
 
-                            foreach (string str in mtdList)
+                        foreach (string str in mtdList)
                             {
                                 if (countDictionary.ContainsKey(str))
                                 {

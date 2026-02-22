@@ -25,6 +25,7 @@ namespace DSRViewer.FileHelper
             {
                 try
                 {
+                    // Для корневого файла виртуальный путь — это сам filePath (реальный путь на диске)
                     ProcessFileGroup(group.Key, group.Value, operation);
                 }
                 catch (Exception e)
@@ -77,73 +78,76 @@ namespace DSRViewer.FileHelper
                     Console.WriteLine($"  Virtual path: {filePath}|{string.Join("|", indices)}");
             }
 
+            // Базовый виртуальный путь для корня — сам filePath
+            string baseVirtualPath = filePath;
+
             if (IsBnd(filePath))
-                ProcessBnd(filePath, indicesList, operation);
+                ProcessBnd(filePath, indicesList, operation, baseVirtualPath);
             else if (IsTpf(filePath))
-                ProcessTpf(filePath, indicesList, operation);
+                ProcessTpf(filePath, indicesList, operation, baseVirtualPath);
             else if (IsBxf(filePath))
-                ProcessBxf(filePath, indicesList, operation);
+                ProcessBxf(filePath, indicesList, operation, baseVirtualPath);
             else if (IsFlver(filePath))
-                ProcessFlver(filePath, indicesList, operation);
+                ProcessFlver(filePath, indicesList, operation, baseVirtualPath);
         }
 
-        private void ProcessInnerFile(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        private void ProcessInnerFile(BinderFile file, List<int[]> indicesList, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine($"Processing inner file {file.Name}");
+            Console.WriteLine($"Processing inner file at {virtualBasePath}");
 
             if (indicesList.Count == 0 || indicesList.All(indices => indices.Length == 0))
             {
-                ProcessFileData(file, operation);
+                ProcessFileData(file, operation, virtualBasePath);
                 return;
             }
 
             if (IsBndData(file.Bytes))
-                ProcessBndData(file, indicesList, operation);
+                ProcessBndData(file, indicesList, operation, virtualBasePath);
             else if (IsTpfData(file.Bytes))
-                ProcessTpfData(file, indicesList, operation);
+                ProcessTpfData(file, indicesList, operation, virtualBasePath);
             else if (IsBxfData(file.Bytes))
-                ProcessBxfData(file, indicesList, operation);
+                ProcessBxfData(file, indicesList, operation, virtualBasePath);
             else if (IsDcxData(file.Bytes))
-                ProcessDcxData(file, indicesList, operation);
+                ProcessDcxData(file, indicesList, operation, virtualBasePath);
         }
 
-        private void ProcessFileData(BinderFile file, FileOperation operation)
+        private void ProcessFileData(BinderFile file, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine("Processing file data");
+            Console.WriteLine($"Processing file data at {virtualBasePath}");
 
             // Общие операции с файлом внутри контейнера
             if (operation.RenameObject)
             {
                 file.Name = operation.NewObjectName;
-                Console.WriteLine($"Renamed inner file to {file.Name}");
+                Console.WriteLine($"Renamed inner file at {virtualBasePath} to {file.Name}");
             }
 
             if (operation.ReplaceObject && operation.NewObjectBytes.Length > 0)
             {
                 file.Bytes = operation.NewObjectBytes;
-                Console.WriteLine($"Replaced bytes of inner file {file.Name}");
+                Console.WriteLine($"Replaced bytes of inner file at {virtualBasePath}");
             }
 
             // Специфическая обработка по типу данных
             if (IsFlvData(file.Bytes))
             {
-                Console.WriteLine("Processing FLVER data");
-                ProcessFlverData(file, [[]], operation);
+                Console.WriteLine($"Processing FLVER data at {virtualBasePath}");
+                ProcessFlverData(file, [[]], operation, virtualBasePath);
             }
             else if (IsTpfData(file.Bytes))
             {
-                Console.WriteLine("Processing TPF data");
-                ProcessTpfData(file, [[]], operation);
+                Console.WriteLine($"Processing TPF data at {virtualBasePath}");
+                ProcessTpfData(file, [[]], operation, virtualBasePath);
             }
             else if (IsBxfData(file.Bytes))
             {
-                Console.WriteLine("Processing BXF data");
-                ProcessBxfData(file, [[]], operation);
+                Console.WriteLine($"Processing BXF data at {virtualBasePath}");
+                ProcessBxfData(file, [[]], operation, virtualBasePath);
             }
             else if (IsDcxData(file.Bytes))
             {
-                Console.WriteLine("Processing DCX data");
-                ProcessDcxData(file, [[]], operation);
+                Console.WriteLine($"Processing DCX data at {virtualBasePath}");
+                ProcessDcxData(file, [[]], operation, virtualBasePath);
             }
             else if (operation.GetObject)
             {
@@ -152,23 +156,23 @@ namespace DSRViewer.FileHelper
         }
 
         // ---------- BND ----------
-        private void ProcessBnd(string path, List<int[]> indicesList, FileOperation operation)
+        private void ProcessBnd(string path, List<int[]> indicesList, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine($"Processing BND archive {path}");
+            Console.WriteLine($"Processing BND archive at {virtualBasePath}");
             var bnd = BND3.Read(path);
-            ProcessBndCore(bnd, indicesList, operation);
+            ProcessBndCore(bnd, indicesList, operation, virtualBasePath);
             if (operation.WriteObject)
                 bnd.Write(path);
         }
-        private void ProcessBndData(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        private void ProcessBndData(BinderFile file, List<int[]> indicesList, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine($"Processing BND data {file.Name}");
+            Console.WriteLine($"Processing BND data at {virtualBasePath}");
             var bnd = BND3.Read(file.Bytes);
-            ProcessBndCore(bnd, indicesList, operation);
+            ProcessBndCore(bnd, indicesList, operation, virtualBasePath);
             if (operation.WriteObject)
                 file.Bytes = bnd.Write();
         }
-        private void ProcessBndCore(BND3 bnd, List<int[]> indicesList, FileOperation operation)
+        private void ProcessBndCore(BND3 bnd, List<int[]> indicesList, FileOperation operation, string baseVirtualPath)
         {
             // Операции на самом контейнере (без индексов)
             if (indicesList.Any(indices => indices.Length == 0))
@@ -181,7 +185,7 @@ namespace DSRViewer.FileHelper
                         Bytes = operation.NewObjectBytes.Length > 0 ? operation.NewObjectBytes : []
                     };
                     bnd.Files.Add(newFile);
-                    Console.WriteLine($"Added new file '{newFile.Name}' to BND");
+                    Console.WriteLine($"Added new file to BND at {baseVirtualPath}");
                 }
             }
 
@@ -191,15 +195,6 @@ namespace DSRViewer.FileHelper
                 .GroupBy(indices => indices[0])
                 .ToDictionary(g => g.Key, g => g.Select(indices => indices.Skip(1).ToArray()).ToList());
 
-            foreach (var i in fileGroups)
-            {
-                Console.WriteLine(i);
-                foreach (var j in i.Value)
-                {
-                    Console.WriteLine(j);
-                }
-            }
-
             foreach (var group in fileGroups)
             {
                 var fileIndex = group.Key;
@@ -208,12 +203,13 @@ namespace DSRViewer.FileHelper
                 if (fileIndex < 0 || fileIndex >= bnd.Files.Count) continue;
 
                 var file = bnd.Files[fileIndex];
+                string fullPath = $"{baseVirtualPath}|{fileIndex}";
 
                 // Удаление файла
                 if (operation.RemoveObject && innerIndices.Count == 1 && innerIndices[0].Length == 0)
                 {
                     bnd.Files.RemoveAt(fileIndex);
-                    Console.WriteLine($"Removed file at index {fileIndex} from BND");
+                    Console.WriteLine($"Removed file at {fullPath} from BND");
                     continue;
                 }
 
@@ -221,35 +217,34 @@ namespace DSRViewer.FileHelper
                 if (operation.RenameObject && innerIndices.Count == 1 && innerIndices[0].Length == 0)
                 {
                     file.Name = operation.NewObjectName;
-                    Console.WriteLine($"Renamed file at index {fileIndex} to {file.Name}");
-                    continue;
+                    Console.WriteLine($"Renamed file at {fullPath} to {file.Name}");
                 }
 
                 // Рекурсивная обработка внутренностей файла
-                ProcessInnerFile(file, innerIndices, operation);
+                ProcessInnerFile(file, innerIndices, operation, fullPath);
             }
         }
 
         // ---------- TPF ----------
-        private void ProcessTpf(string path, List<int[]> indicesList, FileOperation operation)
+        private void ProcessTpf(string path, List<int[]> indicesList, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine($"Processing TPF archive {path}");
+            Console.WriteLine($"Processing TPF archive at {virtualBasePath}");
             var tpf = TPF.Read(path);
-            ProcessTpfCore(tpf, indicesList, operation);
+            ProcessTpfCore(tpf, indicesList, operation, virtualBasePath);
             if (operation.WriteObject)
                 tpf.Write(path);
         }
 
-        private void ProcessTpfData(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        private void ProcessTpfData(BinderFile file, List<int[]> indicesList, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine($"Processing TPF data {file.Name}");
+            Console.WriteLine($"Processing TPF data at {virtualBasePath}");
             var tpf = TPF.Read(file.Bytes);
-            ProcessTpfCore(tpf, indicesList, operation);
+            ProcessTpfCore(tpf, indicesList, operation, virtualBasePath);
             if (operation.WriteObject)
                 file.Bytes = tpf.Write();
         }
 
-        private void ProcessTpfCore(TPF tpf, List<int[]> indicesList, FileOperation operation)
+        private void ProcessTpfCore(TPF tpf, List<int[]> indicesList, FileOperation operation, string baseVirtualPath)
         {
             foreach (var indices in indicesList)
             {
@@ -263,7 +258,7 @@ namespace DSRViewer.FileHelper
                     if (operation.AddObject)
                     {
                         tpf.Textures.Add(CreateTextureFromBytes(operation.NewObjectBytes, operation.NewObjectName));
-                        Console.WriteLine($"Added new texture via AddObject");
+                        Console.WriteLine($"Added new texture via AddObject to TPF at {baseVirtualPath}");
                     }
                     continue;
                 }
@@ -271,13 +266,16 @@ namespace DSRViewer.FileHelper
                 var textureIndex = indices[0];
                 if (textureIndex >= 0 && textureIndex < tpf.Textures.Count)
                 {
-                    var texture = tpf.Textures[textureIndex];
+                    string fullPath = $"{baseVirtualPath}|{textureIndex}";
 
+                    Console.WriteLine($"Processing Texture data at {fullPath}");
+                    var texture = tpf.Textures[textureIndex];
+                    
                     // Удаление текстуры (общее)
                     if (operation.RemoveObject)
                     {
                         tpf.Textures.RemoveAt(textureIndex);
-                        Console.WriteLine($"Removed texture at index {textureIndex} via RemoveObject");
+                        Console.WriteLine($"Removed texture at {fullPath} via RemoveObject");
                         continue;
                     }
 
@@ -285,16 +283,14 @@ namespace DSRViewer.FileHelper
                     {
                         texture.Name = operation.NewObjectName;
                         texture.Bytes = operation.NewObjectBytes;
-                        Console.WriteLine($"Replaced texture at index {textureIndex} to {texture.Name} via RenameObject");
-                        continue;
+                        Console.WriteLine($"Replaced texture at {fullPath} via ReplaceObject");
                     }
 
                     // Переименование текстуры (общее)
                     if (operation.RenameObject)
                     {
                         texture.Name = operation.NewObjectName;
-                        Console.WriteLine($"Renamed texture at index {textureIndex} to {texture.Name} via RenameObject");
-                        continue;
+                        Console.WriteLine($"Renamed texture at {fullPath} to {texture.Name} via RenameObject");
                     }
 
                     if (operation.ChangeTextureFormat)
@@ -321,27 +317,27 @@ namespace DSRViewer.FileHelper
         }
 
         // ---------- BXF ----------
-        private void ProcessBxf(string bhdPath, List<int[]> indicesList, FileOperation operation)
+        private void ProcessBxf(string bhdPath, List<int[]> indicesList, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine($"Processing BXF archive {bhdPath}");
+            Console.WriteLine($"Processing BXF archive at {virtualBasePath}");
             var bdtPath = FindBdtPath(bhdPath);
             if (!File.Exists(bdtPath)) return;
 
             var bxf = BXF3.Read(bhdPath, bdtPath);
-            ProcessBxfCore(bxf, indicesList, operation);
+            ProcessBxfCore(bxf, indicesList, operation, virtualBasePath);
 
             if (operation.WriteObject)
                 bxf.Write(bhdPath, bdtPath);
         }
 
-        private void ProcessBxfData(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        private void ProcessBxfData(BinderFile file, List<int[]> indicesList, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine($"Processing BXF data {file.Name}");
+            Console.WriteLine($"Processing BXF data at {virtualBasePath}");
             var bdtPath = FindBdtPathForFile(file);
             if (!File.Exists(bdtPath)) return;
 
             var bxf = BXF3.Read(file.Bytes, bdtPath);
-            ProcessBxfCore(bxf, indicesList, operation);
+            ProcessBxfCore(bxf, indicesList, operation, virtualBasePath);
 
             if (operation.WriteObject)
             {
@@ -351,7 +347,7 @@ namespace DSRViewer.FileHelper
             }
         }
 
-        private void ProcessBxfCore(BXF3 bxf, List<int[]> indicesList, FileOperation operation)
+        private void ProcessBxfCore(BXF3 bxf, List<int[]> indicesList, FileOperation operation, string baseVirtualPath)
         {
             // Операции на самом BXF (без индексов)
             if (indicesList.Any(indices => indices.Length == 0))
@@ -364,12 +360,12 @@ namespace DSRViewer.FileHelper
                         Bytes = operation.NewObjectBytes.Length > 0 ? operation.NewObjectBytes : []
                     };
                     bxf.Files.Add(newFile);
-                    Console.WriteLine($"Added new file '{newFile.Name}' to BXF via AddObject");
+                    Console.WriteLine($"Added new file to BXF at {baseVirtualPath} via AddObject");
                 }
 
                 // Специфичное добавление TPF.DCX
                 if (operation.AddTpfDcx)
-                    AddTpfDcxToBxf(bxf, operation);
+                    AddTpfDcxToBxf(bxf, operation, baseVirtualPath);
             }
 
             // Обработка конкретных файлов по индексам
@@ -386,12 +382,13 @@ namespace DSRViewer.FileHelper
                 if (fileIndex < 0 || fileIndex >= bxf.Files.Count) continue;
 
                 var file = bxf.Files[fileIndex];
+                string fullPath = $"{baseVirtualPath}|{fileIndex}";
 
                 // Удаление файла
                 if (operation.RemoveObject && innerIndices.Count == 1 && innerIndices[0].Length == 0)
                 {
                     bxf.Files.RemoveAt(fileIndex);
-                    Console.WriteLine($"Removed file at index {fileIndex} from BXF via RemoveObject");
+                    Console.WriteLine($"Removed file at {fullPath} from BXF via RemoveObject");
                     continue;
                 }
 
@@ -399,11 +396,10 @@ namespace DSRViewer.FileHelper
                 if (operation.RenameObject && innerIndices.Count == 1 && innerIndices[0].Length == 0)
                 {
                     file.Name = operation.NewObjectName;
-                    Console.WriteLine($"Renamed file at index {fileIndex} to {file.Name} via RenameObject");
-                    continue;
+                    Console.WriteLine($"Renamed file at {fullPath} to {file.Name} via RenameObject");
                 }
 
-                ProcessInnerFile(file, innerIndices, operation);
+                ProcessInnerFile(file, innerIndices, operation, fullPath);
             }
 
             // Специфичное удаление TPF.DCX (для обратной совместимости)
@@ -416,39 +412,41 @@ namespace DSRViewer.FileHelper
                     if (tpfDcxIndex >= 0 && tpfDcxIndex < bxf.Files.Count)
                     {
                         bxf.Files.RemoveAt(tpfDcxIndex);
-                        Console.WriteLine($"Removed tpf.dcx at index {tpfDcxIndex} via RemoveTpfDcx");
+                        Console.WriteLine($"Removed tpf.dcx at {baseVirtualPath}|{tpfDcxIndex} via RemoveTpfDcx");
                     }
                 }
             }
         }
 
         // ---------- FLVER ----------
-        private void ProcessFlver(string path, List<int[]> indicesList, FileOperation operation)
+        private void ProcessFlver(string path, List<int[]> indicesList, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine($"Processing FLVER file {path}");
+            Console.WriteLine($"Processing FLVER file at {virtualBasePath}");
             var flver = FLVER2.Read(path);
 
             // Операции на самом файле
             if (indicesList.Any(indices => indices.Length == 0))
             {
                 if (operation.GetObject)
-                    GetFlverSafe(flver, path);
+                    GetFlverSafe(flver, path, virtualBasePath);
                 if (operation.ReplaceObject)
                 {
                     try
                     {
                         var temp = flver.Write();
-                        Console.WriteLine($"Read normal flver {path}");
+                        Console.WriteLine($"Read normal flver at {virtualBasePath}");
                         flver = FLVER2.Read(operation.NewObjectBytes);
+                        Console.WriteLine($"Replaced FLVER file at {virtualBasePath}");
                     }
-                    catch 
+                    catch
                     {
-                        Console.WriteLine($"Broken flver {path}");
+                        Console.WriteLine($"Broken flver at {virtualBasePath}");
                         flver = FLVER2.Read(operation.NewObjectBytes);
                         File.WriteAllBytes(path, operation.NewObjectBytes);
+                        Console.WriteLine($"Replaced FLVER file bytes at {virtualBasePath}");
                     }
                 }
-                
+
                 // Переименование файла на диске
                 if (operation.RenameObject && !string.IsNullOrEmpty(operation.NewObjectName))
                 {
@@ -457,56 +455,55 @@ namespace DSRViewer.FileHelper
                     if (!path.Equals(newPath, StringComparison.OrdinalIgnoreCase))
                     {
                         File.Move(path, newPath);
-                        Console.WriteLine($"Renamed FLVER file to {newPath}");
+                        Console.WriteLine($"Renamed FLVER file at {virtualBasePath} to {newPath}");
                         path = newPath; // обновляем для последующей записи
                     }
                 }
 
                 if (operation.UseFlverDelegate)
-
                     operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, path, _errorLogs);
 
                 // Удаление файла (осторожно!)
                 if (operation.RemoveObject)
                 {
                     File.Delete(path);
-                    Console.WriteLine($"Deleted FLVER file {path}");
+                    Console.WriteLine($"Removed FLVER file at {virtualBasePath}");
                     return; // файл удалён, запись не нужна
                 }
 
                 if (operation.WriteObject)
                 {
                     byte[] original = File.ReadAllBytes(path);
-                    WriteFlverSafe(flver, path, original);
+                    WriteFlverSafe(flver, path, original, virtualBasePath);
                 }
             }
-
-            
         }
 
-        private void ProcessFlverData(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        private void ProcessFlverData(BinderFile file, List<int[]> indicesList, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine($"Processing FLVER file {file.Name}");
+            Console.WriteLine($"Processing FLVER data at {virtualBasePath}");
             var flver = FLVER2.Read(file.Bytes);
             if (indicesList.Any(indices => indices.Length == 0))
             {
 
                 if (operation.GetObject)
-                    GetFlverSafe(flver, file);
+                    GetFlverSafe(flver, file, virtualBasePath);
 
                 if (operation.ReplaceObject)
                 {
                     try
                     {
                         var temp = flver.Write();
-                        Console.WriteLine($"Read normal flver {file.Name}");
+                        Console.WriteLine($"Read normal flver at {virtualBasePath}");
                         flver = FLVER2.Read(operation.NewObjectBytes);
+                        Console.WriteLine($"Replaced FLVER file at {virtualBasePath}");
                     }
                     catch
                     {
-                        Console.WriteLine($"Broken flver {file.Name}");
+                        Console.WriteLine($"Read broken flver at {virtualBasePath}");
                         flver = FLVER2.Read(operation.NewObjectBytes);
                         file.Bytes = operation.NewObjectBytes;
+                        Console.WriteLine($"Replaced FLVER file bytes at {virtualBasePath}");
                     }
                 }
 
@@ -515,23 +512,24 @@ namespace DSRViewer.FileHelper
                     file.Name = operation.NewObjectName;
 
                 if (operation.UseFlverDelegate)
-                    operation.AdditionalFlverProcessing?.Invoke(flver, _currentRealPath, file.Name, _errorLogs);
+                    operation.AdditionalFlverProcessing?.Invoke(flver, virtualBasePath, file.Name, _errorLogs);
 
                 if (operation.WriteObject)
-                    file.Bytes = WriteFlverSafe(flver, file.Bytes, file.Name);
+                    file.Bytes = WriteFlverSafe(flver, file.Bytes, virtualBasePath);
             }
         }
 
         // ---------- DCX ----------
-        private void ProcessDcxData(BinderFile file, List<int[]> indicesList, FileOperation operation)
+        private void ProcessDcxData(BinderFile file, List<int[]> indicesList, FileOperation operation, string virtualBasePath)
         {
-            Console.WriteLine($"Processing DCX data {file.Name}");
+            Console.WriteLine($"Processing DCX data at {virtualBasePath}");
             try
             {
                 var decompressed = DCX.Decompress(file.Bytes, out var dcxType);
                 var tempFile = new BinderFile { Bytes = decompressed, Name = file.Name };
 
-                ProcessInnerFile(tempFile, indicesList, operation);
+                // Рекурсивно обрабатываем содержимое с тем же виртуальным путём
+                ProcessInnerFile(tempFile, indicesList, operation, virtualBasePath);
 
                 // Общие операции с самим DCX (без индексов)
                 if (indicesList.Any(indices => indices.Length == 0))
@@ -546,7 +544,7 @@ namespace DSRViewer.FileHelper
                     if (operation.ReplaceObject && operation.NewObjectBytes.Length > 0)
                     {
                         file.Bytes = operation.NewObjectBytes;
-                        Console.WriteLine($"Replaced DCX data of {file.Name}");
+                        Console.WriteLine($"Replaced DCX data at {virtualBasePath}");
                         return; // уже записали новые сжатые данные
                     }
                 }
@@ -556,7 +554,7 @@ namespace DSRViewer.FileHelper
             }
             catch (Exception ex)
             {
-                var errorMsg = $"Failed to decompress DCX for {file.Name}: {ex.Message}";
+                var errorMsg = $"Failed to decompress DCX for {virtualBasePath}: {ex.Message}";
                 Console.WriteLine(errorMsg);
                 _errorLogs.Add(errorMsg);
             }
@@ -564,9 +562,9 @@ namespace DSRViewer.FileHelper
 
         // ---------- Вспомогательные методы ----------
 
-        private void AddTpfDcxToBxf(BXF3 bxf, FileOperation operation)
+        private void AddTpfDcxToBxf(BXF3 bxf, FileOperation operation, string baseVirtualPath)
         {
-            Console.WriteLine($"Adding TPF.DCX archive to BXF");
+            Console.WriteLine($"Adding TPF.DCX archive to BXF at {baseVirtualPath}");
             try
             {
                 var tpf = new TPF();
@@ -576,10 +574,10 @@ namespace DSRViewer.FileHelper
 
                 var tpfBytes = tpf.Write();
 
-                
+
                 var dcxType = new DCX.DcxDfltCompressionInfo(0);
                 var compressedTpf = DCX.Compress(tpfBytes, dcxType);
-                
+
                 var newFileName = string.IsNullOrEmpty(operation.NewTpfDcxArchiveName)
                     ? GenerateUniqueFileName(bxf, ".tpf.dcx")
                     : operation.NewTpfDcxArchiveName;
@@ -591,14 +589,14 @@ namespace DSRViewer.FileHelper
                 };
 
                 bxf.Files.Add(newFile);
-                Console.WriteLine($"Added TPF.DCX archive as {newFileName} to BXF");
+                Console.WriteLine($"Added TPF.DCX archive as {newFileName} to BXF at {baseVirtualPath}");
 
                 if (operation.GetObject)
                     _mainObject = newFile;
             }
             catch (Exception ex)
             {
-                var errorMsg = $"Failed to add TPF.DCX to BXF: {ex.Message}";
+                var errorMsg = $"Failed to add TPF.DCX to BXF at {baseVirtualPath}: {ex.Message}";
                 Console.WriteLine(errorMsg);
                 _errorLogs.Add(errorMsg);
             }
@@ -628,7 +626,7 @@ namespace DSRViewer.FileHelper
             };
         }
 
-        private void GetFlverSafe(FLVER2 flver, BinderFile file)
+        private void GetFlverSafe(FLVER2 flver, BinderFile file, string virtualBasePath)
         {
             try
             {
@@ -638,9 +636,10 @@ namespace DSRViewer.FileHelper
             catch
             {
                 _mainObject = file;
+                Console.WriteLine($"Read broken FLVER at {virtualBasePath}");
             }
         }
-        private void GetFlverSafe(FLVER2 flver, string path)
+        private void GetFlverSafe(FLVER2 flver, string path, string virtualBasePath)
         {
             try
             {
@@ -650,10 +649,11 @@ namespace DSRViewer.FileHelper
             catch
             {
                 _mainObject = File.ReadAllBytes(path);
+                Console.WriteLine($"Read broken FLVER at {virtualBasePath}");
             }
         }
 
-        private byte[] WriteFlverSafe(FLVER2 flver, byte[] original, string context)
+        private byte[] WriteFlverSafe(FLVER2 flver, byte[] original, string virtualBasePath)
         {
             try
             {
@@ -661,7 +661,7 @@ namespace DSRViewer.FileHelper
             }
             catch (Exception ex)
             {
-                var errorMsg = $"Failed to write FLVER to {context}: {ex.Message}";
+                var errorMsg = $"Failed to write FLVER at {virtualBasePath}: {ex.Message}";
                 Console.WriteLine(errorMsg);
                 _errorLogs.Add(errorMsg);
                 Console.WriteLine("Try to write original bytes");
@@ -669,17 +669,17 @@ namespace DSRViewer.FileHelper
             }
         }
 
-        private void WriteFlverSafe(FLVER2 flver, string path, byte[] original)
+        private void WriteFlverSafe(FLVER2 flver, string path, byte[] original, string virtualBasePath)
         {
             try
             {
                 flver.Write(path);
-                Console.WriteLine($"Successfully saved(?) changes to: {path}");
+                Console.WriteLine($"Successfully saved(?) changes to: {virtualBasePath}");
 
             }
             catch (Exception ex)
             {
-                var errorMsg = $"Failed to write FLVER to {path}: {ex.Message}";
+                var errorMsg = $"Failed to write FLVER to {virtualBasePath}: {ex.Message}";
                 Console.WriteLine(errorMsg);
                 _errorLogs.Add(errorMsg);
                 Console.WriteLine("Try to write original bytes");
