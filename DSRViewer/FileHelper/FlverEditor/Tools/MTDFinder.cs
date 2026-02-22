@@ -65,9 +65,6 @@ namespace DSRViewer.FileHelper.FlverEditor.Tools
                             File.WriteAllLines("MTDs.txt", modelList);
                         }
 
-                            
-                        }
-
                         if (ImGui.Button("Find All MTD"))
                         {
                             List<string> mtdList = [];
