@@ -1,123 +1,88 @@
 ﻿using System.Text.Json;
-using System.Windows.Forms;
 
 namespace DSRViewer.Core
 {
+    /// <summary>Данные конфигурации приложения, сериализуемые в JSON.</summary>
+    public class ConfigData
+    {
+        public string GameFolder { get; set; } = "";
+        public string ExtractFolder { get; set; } = "";
+        public string MtdFolder { get; set; } = "";
+        public bool LazyLoading { get; set; } = false;
+    }
+
+    /// <summary>Управляет конфигурацией приложения: загрузка, сохранение и выбор папок.</summary>
     public class Config
     {
-        private string _configName;
-        private AppConfig _configData;
+        private readonly string _configName;
+        private ConfigData _configData;
 
-        public string GameFolder => _configData.GameFolder;
+        public string GameFolder   => _configData.GameFolder;
         public string ExtractFolder => _configData.ExtractFolder;
-        public string MtdFolder => _configData.MtdFolder;
+        public string MtdFolder    => _configData.MtdFolder;
+        public bool   LazyLoading  => _configData.LazyLoading;
+
+        public void SetLazyLoading(bool value)
+        {
+            _configData.LazyLoading = value;
+            Save();
+        }
 
         public Config(string configName = "Default")
         {
             _configName = configName;
-            _configData = new AppConfig();
+            _configData = new ConfigData();
             Load();
         }
 
+        private string FilePath => Path.Combine(AppContext.BaseDirectory, $"{_configName}.json");
+
+        /// <summary>Загружает конфигурацию из JSON-файла.</summary>
         public void Load()
         {
             try
             {
-                string filePath = $"{_configName}.json";
-                if (File.Exists(filePath))
+                if (File.Exists(FilePath))
                 {
-                    string json = File.ReadAllText(filePath);
-                    _configData = JsonSerializer.Deserialize<AppConfig>(json);
+                    string json = File.ReadAllText(FilePath);
+                    _configData = JsonSerializer.Deserialize<ConfigData>(json) ?? new ConfigData();
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Config] Load failed: {ex.Message}");
+            }
         }
 
+        /// <summary>Сохраняет конфигурацию в JSON-файл.</summary>
         public void Save()
         {
             try
             {
-                string filePath = $"{_configName}.json";
-                string json = JsonSerializer.Serialize(_configData, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(filePath, json);
+                var opts = new JsonSerializerOptions { WriteIndented = true };
+                string json = JsonSerializer.Serialize(_configData, opts);
+                File.WriteAllText(FilePath, json);
             }
-            catch { }
-        }
-
-        public bool SelectGameFolder()
-        {
-            bool success = false;
-            var thread = new Thread(() =>
+            catch (Exception ex)
             {
-                using (var dialog = new FolderBrowserDialog())
-                {
-                    dialog.Description = "Select Game directory";
-
-                    if (dialog.ShowDialog() == DialogResult.OK)
-                    {
-                        _configData.GameFolder = dialog.SelectedPath;
-                        Save();
-                        success = true;
-                    }
-                }
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
-            return success;
+                Console.WriteLine($"[Config] Save failed: {ex.Message}");
+            }
         }
 
-        public bool SelectExtractFolder()
+        /// <summary>Открывает диалог выбора папки игры и сохраняет путь.</summary>
+        public bool SelectGameFolder()    => SelectFolder("Select Game directory",    p => _configData.GameFolder = p);
+        /// <summary>Открывает диалог выбора папки извлечения и сохраняет путь.</summary>
+        public bool SelectExtractFolder() => SelectFolder("Select Extract directory", p => _configData.ExtractFolder = p);
+        /// <summary>Открывает диалог выбора папки MTD и сохраняет путь.</summary>
+        public bool SelectMtdFolder()     => SelectFolder("Select MTD directory",     p => _configData.MtdFolder = p);
+
+        private bool SelectFolder(string description, Action<string> onSelected)
         {
-            bool success = false;
-            var thread = new Thread(() =>
-            {
-                using (var dialog = new FolderBrowserDialog())
-                {
-                    dialog.Description = "Select Extract directory";
-
-                    if (dialog.ShowDialog() == DialogResult.OK)
-                    {
-                        _configData.ExtractFolder = dialog.SelectedPath;
-                        Save();
-                        success = true;
-                    }
-                }
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
-            return success;
-        }
-
-        public bool SelectMtdFolder()
-        {
-            bool success = false;
-            var thread = new Thread(() =>
-            {
-                using (var dialog = new FolderBrowserDialog())
-                {
-                    dialog.Description = "Select MTD directory";
-
-                    if (dialog.ShowDialog() == DialogResult.OK)
-                    {
-                        _configData.MtdFolder = dialog.SelectedPath;
-                        Save();
-                        success = true;
-                    }
-                }
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
-            return success;
-        }
-
-        public class AppConfig
-        {
-            public string GameFolder { get; set; } = "";
-            public string ExtractFolder { get; set; } = "";
-            public string MtdFolder { get; set; } = "";
+            string path = DialogHelper.SelectFolder(description);
+            if (string.IsNullOrEmpty(path)) return false;
+            onSelected(path);
+            Save();
+            return true;
         }
     }
 }

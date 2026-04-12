@@ -4,9 +4,8 @@ using Veldrid.StartupUtilities;
 using ImGuiNET;
 using System.Diagnostics;
 using System.Numerics;
-using Veldrid.MetalBindings;
-using DSRViewer.ImGuiHelper;
-using DSRViewer.Core.WindowsManager;
+using DSRViewer.UI.Base;
+using DSRViewer.UI.Windows;
 
 namespace DSRViewer
 {
@@ -22,7 +21,6 @@ namespace DSRViewer
         static int _windowHeight = 1000;
         static void Main(string[] args)
         {
-            // Create window, GraphicsDevice, and all resources necessary for the demo.
             VeldridStartup.CreateWindowAndGraphicsDevice(
                 new WindowCreateInfo(50, 50, _windowWidth, _windowHeight, WindowState.Normal, "DSRViewer"),
                 new GraphicsDeviceOptions(true, null, true, ResourceBindingModel.Improved, true, true),
@@ -48,6 +46,17 @@ namespace DSRViewer
 
                 InputSnapshot snapshot = _window.PumpEvents();
                 if (!_window.Exists) { break; }
+
+                bool minimized = _window.WindowState == WindowState.Minimized;
+
+                // При свёрнутом окне — пропускаем рендер, только спим
+                if (minimized)
+                {
+                    System.Threading.Thread.Sleep(200);
+                    stopwatch.Restart();
+                    continue;
+                }
+
                 _controller.Update(deltaTime, snapshot);
 
                 // Draw ImGui UI
@@ -61,10 +70,18 @@ namespace DSRViewer
                 _cl.End();
                 _gd.SubmitCommands(_cl);
                 _gd.SwapBuffers(_gd.MainSwapchain);
+
+                // Ограничение FPS: 30 в фокусе, 5 при неактивном
+                float targetMs = _window.Focused ? 1000f / 30f : 1000f / 5f;
+
+                float frameMs = stopwatch.ElapsedTicks / (float)Stopwatch.Frequency * 1000f;
+                if (frameMs < targetMs)
+                    System.Threading.Thread.Sleep((int)(targetMs - frameMs));
             }
 
             // Clean up Veldrid resources
             _gd.WaitForIdle();
+            mainWindow.Dispose();
             _controller.Dispose();
             _cl.Dispose();
             _gd.Dispose();

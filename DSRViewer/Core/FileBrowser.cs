@@ -1,78 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-
-namespace DSRViewer.Core
+﻿namespace DSRViewer.Core
 {
+    /// <summary>Предоставляет методы для выбора папок и файлов через диалоги и получения их содержимого.</summary>
     public class FileBrowser
     {
-        string file = "";
+        /// <summary>Открывает диалог выбора папки и возвращает путь.</summary>
+        public string SetFolderPath() => DialogHelper.SelectFolder();
 
-        List<string> fileList = [];
+        /// <summary>Открывает диалог выбора файла и возвращает путь.</summary>
+        public string SetFilePath(string title, string filter) => DialogHelper.SelectFile(title, filter);
 
-        public string SetFolderPath()
-        {
-            file = "";
-            var thread = new Thread(() =>
-            {
-                using (var folderDialog = new FolderBrowserDialog()) //Windows dialog
-                {
-                    folderDialog.Description = "Select a directory";
-                    folderDialog.UseDescriptionForTitle = true;
-                    if (folderDialog.ShowDialog() == DialogResult.OK)
-                    {
-                        file = folderDialog.SelectedPath;
-                    }
-                }
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
-
-            return file;
-        }
-
-        public string SetFilePath(string title, string filter)
-        {
-            file = "";
-            var thread = new Thread(() =>
-            {
-                using (var fileDialog = new OpenFileDialog()) //Windows dialog
-                {
-                    fileDialog.Title = title;
-                    fileDialog.Filter = filter;
-                    if (fileDialog.ShowDialog() == DialogResult.OK)
-                    {
-                        file = fileDialog.FileName;
-                    }
-                }
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
-
-            return file;
-        }
-
+        /// <summary>Возвращает список файлов в указанной папке.</summary>
         public List<string> GetFileList(string folderPath)
         {
+            if (!Directory.Exists(folderPath)) return [];
             Console.WriteLine("Building list: ...");
-            fileList = [.. Directory.GetFiles(folderPath)];
+            var result = Directory.GetFiles(folderPath).ToList();
             Console.WriteLine("Building list: Done");
-
-            return fileList;
+            return result;
         }
 
+        /// <summary>Возвращает список подпапок в указанной папке.</summary>
         public List<string> GetFolderList(string folderPath)
         {
+            if (!Directory.Exists(folderPath)) return [];
             Console.WriteLine("Building list: ...");
-            fileList = [.. Directory.GetDirectories(folderPath)];
+            var result = Directory.GetDirectories(folderPath).ToList();
             Console.WriteLine("Building list: Done");
-
-            return fileList;
+            return result;
         }
     }
 }
